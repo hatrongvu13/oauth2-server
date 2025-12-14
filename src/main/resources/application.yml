@@ -3,6 +3,9 @@
 # ============================================
 
 quarkus:
+  native:
+    initialize-at-runtime:
+      - com.htv.oauth2.util.CryptoUtil
   application:
     name: oauth2-server
     version: 1.0.0
