@@ -40,7 +40,7 @@ jobs:
       - name: Build Quarkus Native Binary
         run: |
           chmod +x mvnw
-          ./mvnw clean package -Pnative -Dquarkus.native.container-build=true
+          ./mvnw clean package -Pnative -Dquarkus.native.container-build=true -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push Multi-Arch Image
