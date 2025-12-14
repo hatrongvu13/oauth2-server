@@ -1,0 +1,163 @@
+# =========================================================================
+# 1. Kubernetes Secret (Dữ liệu NHẠY CẢM: Mật khẩu, Keys)
+# Giá trị data được mã hóa base64. Ví dụ: admin -> YWRtaW4=
+# =========================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth2-server-secret
+  labels:
+    app: oauth2-server
+type: Opaque
+data:
+  # DB_USERNAME: admin (YWRtaW4=)
+  db_username: YWRtaW4=
+  # DB_PASSWORD: admin (YWRtaW4=)
+  db_password: YWRtaW4=
+
+---
+
+# =========================================================================
+# 2. Kubernetes ConfigMap (Dữ liệu KHÔNG NHẠY CẢM: URLs, Configs chung)
+# =========================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-server-config
+  labels:
+    app: oauth2-server
+data:
+  # Cấu hình Mặc định cho DB và Redis (Localhost cho Dev/Test)
+  DB_URL: "jdbc:postgresql://localhost:5432/oauth2db"
+  REDIS_HOSTS: "redis://localhost:6379"
+
+  # Cấu hình CORS
+  CORS_ORIGINS: "http://localhost:3000,http://localhost:8080"
+
+  # Cấu hình OAuth2
+  JWT_ISSUER: "http://localhost:8080" # Dùng http://localhost:8080 cho Dev/Test
+
+  # Cấu hình Logging
+  Q_LOG_LEVEL: "INFO"
+  OAUTH2_LOG_LEVEL: "DEBUG"
+
+  # Các cấu hình tĩnh khác (không cần thay đổi qua Env)
+  QUARKUS_HTTP_PORT: "8080"
+  QUARKUS_APPLICATION_NAME: "oauth2-server"
+  QUARKUS_FLYWAY_MIGRATE_AT_START: "true"
+  QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: "none"
+  QUARKUS_HIBERNATE_ORM_LOG_SQL: "false"
+  QUARKUS_HIBERNATE_ORM_LOG_BIND_PARAMETERS: "true"
+
+  # Cấu hình OAuth2 Expiry và Rate Limit
+  OAUTH2_JWT_ACCESS_TOKEN_EXPIRY: "3600"
+  OAUTH2_JWT_REFRESH_TOKEN_EXPIRY: "86400"
+  OAUTH2_AUTHORIZATION_CODE_VALIDITY: "300"
+  OAUTH2_RATE_LIMIT_LOGIN_MAX_ATTEMPTS: "5"
+
+---
+
+# =========================================================================
+# 3. Kubernetes Deployment (Sử dụng các biến môi trường từ ConfigMap và Secret)
+# =========================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-server
+  labels:
+    app: oauth2-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-server
+  template:
+    metadata:
+      labels:
+        app: oauth2-server
+    spec:
+      containers:
+        - name: oauth2-server
+          image: htv/oauth2-server:1.0.0-native # Thay thế bằng tên image Native của bạn
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+
+          # --- Khai báo Biến Môi trường ---
+          env:
+
+            # A. Lấy giá trị từ SECRET (Dữ liệu nhạy cảm)
+            - name: QUARKUS_DATASOURCE_USERNAME # Mật khẩu và tài khoản DB
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-server-secret
+                  key: db_username
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-server-secret
+                  key: db_password
+
+            # B. Lấy giá trị từ CONFIGMAP (Dữ liệu chung)
+            # Tên biến môi trường (ví dụ: DB_URL) được ánh xạ tới thuộc tính Quarkus
+            - name: QUARKUS_DATASOURCE_JDBC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: DB_URL
+
+            - name: QUARKUS_REDIS_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: REDIS_HOSTS
+
+            - name: QUARKUS_HTTP_CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: CORS_ORIGINS
+
+            - name: OAUTH2_JWT_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: JWT_ISSUER
+
+            # C. Cấu hình Logging (tùy chọn)
+            - name: QUARKUS_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: Q_LOG_LEVEL
+
+            - name: QUARKUS_LOG_CATEGORY_COM_HTV_OAUTH2_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: OAUTH2_LOG_LEVEL
+
+            # D. Các biến môi trường khác từ ConfigMap (đơn giản hóa)
+            # Các cấu hình này dùng ConfigMap, nhưng được tham chiếu trực tiếp qua tên biến
+            - name: QUARKUS_HTTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: oauth2-server-config
+                  key: QUARKUS_HTTP_PORT
+
+          # ... (Bạn có thể thêm các biến còn lại tương tự)
+
+          # Health checks (Nếu cần)
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15

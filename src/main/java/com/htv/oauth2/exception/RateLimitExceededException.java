@@ -1,0 +1,14 @@
+package com.htv.oauth2.exception;
+
+import lombok.Getter;
+
+@Getter
+public class RateLimitExceededException extends OAuth2Exception {
+
+    private final long retryAfter; // seconds
+
+    public RateLimitExceededException(String message, long retryAfter) {
+        super("rate_limit_exceeded", message, 429);
+        this.retryAfter = retryAfter;
+    }
+}

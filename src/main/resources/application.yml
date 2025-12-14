@@ -1,0 +1,161 @@
+# ============================================
+# Application Configuration
+# ============================================
+
+quarkus:
+  application:
+    name: oauth2-server
+    version: 1.0.0
+
+  # ARC/CDI Configuration (Giữ nguyên, thường không cần dùng Env)
+  arc:
+    unremovable-types:
+      - com.htv.oauth2.config.LoggingInterceptor
+    exclude-types:
+      - com.htv.oauth2.config.Logged
+
+  # HTTP Configuration
+  http:
+    port: ${QUARKUS_HTTP_PORT:8080} #(Thường giữ nguyên, hoặc dùng ${QUARKUS_HTTP_PORT:8080})
+    cors:
+      ~: true
+      # Sử dụng biến môi trường QUARKUS_HTTP_CORS_ORIGINS
+      origins: "${QUARKUS_HTTP_CORS_ORIGINS:*}"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+      headers: "accept,authorization,content-type,x-requested-with"
+      exposed-headers: "Content-Disposition"
+      access-control-max-age: 24H
+
+  # Database Configuration
+  datasource:
+    db-kind: postgresql
+    # Sử dụng biến môi trường được Secret cung cấp
+    username: "${QUARKUS_DATASOURCE_USERNAME:root}"
+    password: "${QUARKUS_DATASOURCE_PASSWORD:root}"
+    jdbc:
+      # Sử dụng biến môi trường được ConfigMap cung cấp
+      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}"
+      max-size: 16
+      min-size: 4
+
+  hibernate-orm:
+    database:
+      generation: none
+    log:
+      # Sử dụng biến môi trường (nếu muốn điều chỉnh trong Production)
+      sql: "${QUARKUS_HIBERNATE_ORM_LOG_SQL:false}"
+      bind-parameters: true
+
+  # Flyway Migration (Giữ nguyên, trừ khi cần thay đổi tại môi trường Prod)
+  flyway:
+    migrate-at-start: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Redis Configuration
+  redis:
+    # Sử dụng biến môi trường được ConfigMap cung cấp
+    hosts: "${QUARKUS_REDIS_HOSTS:redis://localhost:6379}"
+    timeout: 10s
+
+  # Cache Configuration (Giữ nguyên)
+  cache:
+    caffeine:
+      "user-cache":
+        initial-capacity: 100
+        maximum-size: 1000
+        expire-after-write: 10M
+      "client-cache":
+        initial-capacity: 50
+        maximum-size: 500
+        expire-after-write: 30M
+
+  # Logging
+  log:
+    # Sử dụng biến môi trường cho Level chính
+    level: "${QUARKUS_LOG_LEVEL:INFO}"
+    console:
+      enable: true
+      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+    category:
+      # Sử dụng biến môi trường cho package của ứng dụng
+      "com.htv.oauth2": "${QUARKUS_LOG_CATEGORY_COM_HTV_OAUTH2_LEVEL:DEBUG}"
+      "org.hibernate": INFO
+      "io.quarkus": INFO
+
+  # Security (Giữ nguyên)
+  security:
+    users:
+      embedded:
+        enabled: false
+
+  # JWT Configuration (Giữ nguyên)
+  smallrye-jwt:
+    enabled: true
+
+  # OpenAPI/Swagger (Giữ nguyên)
+  smallrye-openapi:
+    path: /openapi
+    info-title: OAuth2 Authorization Server API
+    info-version: 1.0.0
+    info-description: Production-ready OAuth2 Authorization Server
+    info-contact-email: hatrongvu13@gmail.com
+
+  swagger-ui:
+    always-include: true
+    path: /swagger-ui
+
+  # Health Check (Giữ nguyên)
+  smallrye-health:
+    ui:
+      enable: true
+
+  # Metrics (Giữ nguyên)
+  micrometer:
+    enabled: true
+    export:
+      prometheus:
+        enabled: true
+        path: /metrics
+
+  # Scheduler (Giữ nguyên)
+  scheduler:
+    enabled: true
+
+# ============================================
+# OAuth2 Custom Configuration
+# ============================================
+
+oauth2:
+  # JWT Configuration
+  jwt:
+    # Sử dụng biến môi trường OAUTH2_JWT_ISSUER
+    issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
+    # Sử dụng biến môi trường cho thời gian hết hạn
+    access-token-expiry: "${OAUTH2_JWT_ACCESS_TOKEN_EXPIRY:3600}"
+    refresh-token-expiry: "${OAUTH2_JWT_REFRESH_TOKEN_EXPIRY:86400}"
+
+  # Authorization Code Configuration
+  authorization-code:
+    validity: 300
+
+  # Rate Limiting
+  rate-limit:
+    login:
+      # Sử dụng biến môi trường cho Rate Limit
+      max-attempts: "${OAUTH2_RATE_LIMIT_LOGIN_MAX_ATTEMPTS:5}"
+      window-seconds: 900
+    token:
+      max-requests: 100
+      window-seconds: 3600
+
+  # Account Security (Giữ nguyên)
+  security:
+    max-failed-login-attempts: 5
+    account-lock-duration: 900
+    password-min-length: 8
+
+  # Features (Giữ nguyên)
+  features:
+    mfa-enabled: true
+    pkce-required: true
