@@ -111,6 +111,7 @@ quarkus:
   smallrye-health:
     ui:
       enable: true
+      root-path: /q/health-ui
 
   # Metrics (Giữ nguyên)
   micrometer:
