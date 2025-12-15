@@ -242,9 +242,11 @@ oauth2-server/
 ├── README.md
 └── pom.xml
 ```
+
 ## Cấu hình TokenProvider
+
 | Hạng mục                       | Công nghệ / Tiêu chuẩn (2025)                       | Lý do chọn (theo NIST SP 800-63B, RFC 9449, OWASP ASVS 2025)                            |
-| ------------------------------ | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+|--------------------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
 | **Thuật toán ký**              | **Ed25519** (ưu tiên #1) <br> RS256 (hậu bị #2)     | Ed25519 nhanh gấp 10 lần RSA, độ an toàn tương đương, chống tấn công lượng tử ở mức tốt |
 | **Thuật toán mã hoá key**      | RSA-OAEP-256 <br> hoặc ECDH-ES + A256GCM            | Chống tấn công lượng tử tốt hơn RSA-PKCS1, hỗ trợ Perfect Forward Secrecy               |
 | **Refresh Token**              | PASETO v4.local (ưu tiên) <br> hoặc JWT + JWE       | PASETO an toàn hơn JWT (không có “alg:none”), dễ audit                                  |
@@ -282,7 +284,6 @@ oauth2-server/
 └─────────────────────────────────────────┘
 ```
 
-
 ---- 
 
 # OAuth2 Authorization Server
@@ -292,6 +293,7 @@ Production-ready OAuth2 Authorization Server built with Quarkus, implementing RF
 ## 🎯 Features
 
 ### Core OAuth2 Features
+
 - ✅ **Authorization Code Grant** with PKCE support
 - ✅ **Refresh Token Grant**
 - ✅ **Password Grant** (Resource Owner Password Credentials)
@@ -300,6 +302,7 @@ Production-ready OAuth2 Authorization Server built with Quarkus, implementing RF
 - ✅ **Token Revocation** (RFC 7009)
 
 ### Security Features
+
 - ✅ JWT-based Access Tokens
 - ✅ BCrypt Password Hashing
 - ✅ Multi-Factor Authentication (MFA) with TOTP
@@ -309,6 +312,7 @@ Production-ready OAuth2 Authorization Server built with Quarkus, implementing RF
 - ✅ User Consent Management
 
 ### Additional Features
+
 - ✅ Redis-based Token & Session Cache
 - ✅ Comprehensive Audit Logging
 - ✅ Health Checks & Metrics (Prometheus)
@@ -368,23 +372,27 @@ docker-compose up -d postgres redis
 ```
 
 This starts:
+
 - PostgreSQL on port `5432`
 - Redis on port `6379`
 
 ### 3. Run Application
 
 #### Development Mode (with live reload)
+
 ```bash
 ./mvnw quarkus:dev
 ```
 
 #### Production Mode
+
 ```bash
 ./mvnw clean package
 java -jar target/quarkus-app/quarkus-run.jar
 ```
 
 #### Native Image
+
 ```bash
 ./mvnw package -Pnative
 ./target/oauth2-server-1.0.0-runner
@@ -400,7 +408,7 @@ java -jar target/quarkus-app/quarkus-run.jar
 
 ## 📖 API Documentation
 
-### 1. Register User
+### 1.1 Register User
 
 ```bash
 curl -X POST http://localhost:8080/api/users/register \
@@ -413,6 +421,30 @@ curl -X POST http://localhost:8080/api/users/register \
     "firstName": "John",
     "lastName": "Doe"
   }'
+```
+
+```bash
+ curl --location 'http://localhost:8080/api/users/register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "username": "testuser",
+    "email": "test@example.com",
+    "firstName": "Test",
+    "lastName": "User",
+    "password": "P@ssword123",
+    "confirmPassword": "P@ssword123"
+}'
+ ```
+
+### 1.2 User login
+
+``` bash 
+curl --location 'http://localhost:8080/api/auth/login' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "username": "testuser",
+    "password": "P@ssword123"
+}'
 ```
 
 ### 2. Register OAuth2 Client
@@ -438,6 +470,7 @@ Response includes `client_id` and `client_secret` (save these!).
 #### Step 1: Get Authorization Code
 
 Open in browser:
+
 ```
 http://localhost:8080/oauth2/authorize?
   response_type=code&
@@ -450,6 +483,7 @@ http://localhost:8080/oauth2/authorize?
 ```
 
 User logs in and approves. Redirects to:
+
 ```
 http://localhost:3000/callback?code=AUTH_CODE&state=random_state
 ```
@@ -468,6 +502,7 @@ curl -X POST http://localhost:8080/oauth2/token \
 ```
 
 Response:
+
 ```json
 {
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -500,6 +535,7 @@ curl -X POST http://localhost:8080/oauth2/introspect \
 ```
 
 Response:
+
 ```json
 {
   "active": true,
@@ -570,6 +606,7 @@ docker-compose up -d
 ```
 
 This starts:
+
 - PostgreSQL
 - Redis
 - OAuth2 Server
@@ -627,6 +664,7 @@ curl http://localhost:8080/q/metrics
 ```
 
 Key metrics:
+
 - `oauth2_token_issued_total` - Total tokens issued
 - `oauth2_token_revoked_total` - Total tokens revoked
 - `oauth2_login_attempts_total` - Total login attempts
@@ -666,6 +704,7 @@ Key metrics:
 ## 📝 Database Schema
 
 ### Main Tables
+
 - `users` - User accounts
 - `oauth2_clients` - OAuth2 clients
 - `authorization_codes` - Short-lived auth codes
@@ -675,6 +714,7 @@ Key metrics:
 - `user_consents` - User consent records
 
 ### Relationships
+
 ```
 users ─┬─ authorization_codes
        ├─ access_tokens
