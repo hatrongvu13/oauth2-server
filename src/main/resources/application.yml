@@ -4,8 +4,12 @@
 
 quarkus:
   native:
-    initialize-at-runtime:
-      - com.htv.oauth2.util.CryptoUtil
+    additional-build-args:
+      - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
+      - --initialize-at-run-time=java.security.SecureRandom
+      - -H:+ReportExceptionStackTraces
+      - --enable-all-security-services
+      - --allow-incomplete-classpath
   application:
     name: oauth2-server
     version: 1.0.0
@@ -22,7 +26,6 @@ quarkus:
     port: ${QUARKUS_HTTP_PORT:8080} #(Thường giữ nguyên, hoặc dùng ${QUARKUS_HTTP_PORT:8080})
     cors:
       ~: true
-      # Sử dụng biến môi trường QUARKUS_HTTP_CORS_ORIGINS
       origins: "${QUARKUS_HTTP_CORS_ORIGINS:*}"
       methods: "GET,POST,PUT,DELETE,OPTIONS"
       headers: "accept,authorization,content-type,x-requested-with"
@@ -32,12 +35,10 @@ quarkus:
   # Database Configuration
   datasource:
     db-kind: postgresql
-    # Sử dụng biến môi trường được Secret cung cấp
     username: "${QUARKUS_DATASOURCE_USERNAME:root}"
     password: "${QUARKUS_DATASOURCE_PASSWORD:root}"
     jdbc:
-      # Sử dụng biến môi trường được ConfigMap cung cấp
-      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}"
+      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://171.229.223.206:5432/oauth2db}"
       max-size: 16
       min-size: 4
 
@@ -45,11 +46,10 @@ quarkus:
     database:
       generation: none
     log:
-      # Sử dụng biến môi trường (nếu muốn điều chỉnh trong Production)
       sql: "${QUARKUS_HIBERNATE_ORM_LOG_SQL:false}"
       bind-parameters: true
 
-  # Flyway Migration (Giữ nguyên, trừ khi cần thay đổi tại môi trường Prod)
+  # Flyway Migration
   flyway:
     migrate-at-start: true
     locations: classpath:db/migration
@@ -57,11 +57,10 @@ quarkus:
 
   # Redis Configuration
   redis:
-    # Sử dụng biến môi trường được ConfigMap cung cấp
-    hosts: "${QUARKUS_REDIS_HOSTS:redis://localhost:6379}"
+    hosts: "${QUARKUS_REDIS_HOSTS:redis://171.229.223.206:6379}"
     timeout: 10s
 
-  # Cache Configuration (Giữ nguyên)
+  # Cache Configuration
   cache:
     caffeine:
       "user-cache":
@@ -132,9 +131,7 @@ quarkus:
 oauth2:
   # JWT Configuration
   jwt:
-    # Sử dụng biến môi trường OAUTH2_JWT_ISSUER
     issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
-    # Sử dụng biến môi trường cho thời gian hết hạn
     access-token-expiry: "${OAUTH2_JWT_ACCESS_TOKEN_EXPIRY:3600}"
     refresh-token-expiry: "${OAUTH2_JWT_REFRESH_TOKEN_EXPIRY:86400}"
 
@@ -145,7 +142,6 @@ oauth2:
   # Rate Limiting
   rate-limit:
     login:
-      # Sử dụng biến môi trường cho Rate Limit
       max-attempts: "${OAUTH2_RATE_LIMIT_LOGIN_MAX_ATTEMPTS:5}"
       window-seconds: 900
     token:

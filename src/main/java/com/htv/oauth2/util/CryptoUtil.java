@@ -13,15 +13,26 @@ import java.util.Base64;
 @ApplicationScoped
 public class CryptoUtil {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    // Lazy initialization for GraalVM Native Image compatibility
+    private static final class SecureRandomHolder {
+        static final SecureRandom INSTANCE = new SecureRandom();
+    }
+
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    /**
+     * Get SecureRandom instance (lazy-initialized)
+     */
+    private static SecureRandom getSecureRandom() {
+        return SecureRandomHolder.INSTANCE;
+    }
 
     /**
      * Generate secure random token
      */
     public static String generateSecureToken(int length) {
         byte[] randomBytes = new byte[length];
-        SECURE_RANDOM.nextBytes(randomBytes);
+        getSecureRandom().nextBytes(randomBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 
@@ -51,8 +62,9 @@ public class CryptoUtil {
      */
     public static String generateAlphanumeric(int length) {
         StringBuilder sb = new StringBuilder(length);
+        SecureRandom random = getSecureRandom();
         for (int i = 0; i < length; i++) {
-            sb.append(CHARACTERS.charAt(SECURE_RANDOM.nextInt(CHARACTERS.length())));
+            sb.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
         }
         return sb.toString();
     }
@@ -88,7 +100,7 @@ public class CryptoUtil {
      */
     public static String generateTotpSecret() {
         byte[] buffer = new byte[20];
-        SECURE_RANDOM.nextBytes(buffer);
+        getSecureRandom().nextBytes(buffer);
         return Base64.getEncoder().encodeToString(buffer);
     }
 }
