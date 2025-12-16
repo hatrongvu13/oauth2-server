@@ -3,16 +3,19 @@ package com.htv.oauth2.service.user;
 import com.htv.oauth2.domain.User;
 import com.htv.oauth2.dto.request.RegisterRequest;
 import com.htv.oauth2.dto.request.UserUpdateRequest;
+import com.htv.oauth2.dto.response.RegisterResponse;
 import com.htv.oauth2.dto.response.UserResponse;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.repository.UserRepository;
+import com.htv.oauth2.service.security.MfaService;
 import com.htv.oauth2.service.security.PasswordService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -30,11 +33,16 @@ public class UserService {
     @Inject
     PasswordService passwordService;
 
+    @Inject
+    MfaService mfaService;
+
+    private static final String MFA_ISSUER_NAME = "HTV";
+
     /**
      * Register new user
      */
     @Transactional
-    public UserResponse registerUser(RegisterRequest request) {
+    public RegisterResponse registerUser(RegisterRequest request) throws UnsupportedEncodingException {
         log.info("Registering new user: {}", request.getUsername());
 
         // Validate passwords match
@@ -52,15 +60,38 @@ public class UserService {
             throw new EmailAlreadyExistsException(request.getEmail());
         }
 
-        // Create user entity
+        // 1 Create user entity
         User user = userMapper.fromRegisterRequest(request);
         user.setPassword(passwordService.hashPassword(request.getPassword()));
         user.setRoles(Set.of("USER")); // Default role
+        user.setMfaEnabled(false);
+        user.setEmailVerified(true); // giả lập đã xác thực email
+
+        // 2. TẠO VÀ LƯU SECRET KEY TẠM THỜI CHO MFA SETUP
+        String secretKey = mfaService.generateMfaSecret();
+        user.setMfaSecret(secretKey);
 
         userRepository.persist(user);
 
+        // 3. Chuẩn bị dữ liệu phản hồi MFA
+        String qrCodeUrl = mfaService.generateQrCodeUrl(
+                user.getEmail(),
+                secretKey,
+                MFA_ISSUER_NAME
+        );
+
         log.info("User registered successfully: {}", user.getId());
-        return userMapper.toResponse(user);
+        // 4. Trả về RegisterResponse
+        return RegisterResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .createdAt(user.getCreatedAt())
+                .message("User registered successfully. MFA setup is required.")
+                .mfaRequiredSetup(true)
+                .mfaSecretKey(secretKey)
+                .mfaQrCodeUrl(qrCodeUrl)
+                .build();
     }
 
     /**
@@ -70,6 +101,17 @@ public class UserService {
         User user = userRepository.findByIdOptional(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
         return userMapper.toResponse(user);
+    }
+
+    /**
+     * ENABLE MFA for the user (after verification)
+     */
+    @Transactional
+    public void enableMfa(User user) {
+        // Chỉ cần cập nhật trạng thái kích hoạt, vì Secret Key đã được lưu trước đó
+        user.setMfaEnabled(true);
+        userRepository.persist(user);
+        log.info("MFA successfully enabled for user {}", user.getId());
     }
 
     /**

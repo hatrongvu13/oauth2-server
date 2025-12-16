@@ -39,6 +39,9 @@ public class ErrorResponse {
     @JsonProperty("trace_id")
     private String traceId;
 
+    @JsonProperty("additional_info")
+    private Map<String, Object> additionalInfo;
+
     // Standard OAuth2 errors
     public static ErrorResponse invalidRequest(String description) {
         return ErrorResponse.builder()

@@ -2,13 +2,13 @@
 -- V6__insert_default_data.sql
 -- ============================================
 
--- Insert default admin user (password: Admin@123)
--- BCrypt hash for "Admin@123"
+-- Insert default admin user (password: P@ssword123)
+-- BCrypt hash for "P@ssword123"
 INSERT INTO users (id, username, email, password_hash, enabled, email_verified, created_at, updated_at)
 VALUES ('admin-user-id',
         'admin',
         'admin@example.com',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '$2a$10$4YTEEQWGd0W7msYPjV.Fn.Akof8at4vGNYPsgRgUgfdS1kM.qKNby',
         true,
         true,
         CURRENT_TIMESTAMP,

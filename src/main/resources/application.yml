@@ -38,7 +38,7 @@ quarkus:
     username: "${QUARKUS_DATASOURCE_USERNAME:root}"
     password: "${QUARKUS_DATASOURCE_PASSWORD:root}"
     jdbc:
-      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://postgres:5432/oauth2db}"
+      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://192.168.1.20:5432/oauth2db}"
       max-size: 16
       min-size: 4
 
@@ -57,7 +57,7 @@ quarkus:
 
   # Redis Configuration
   redis:
-    hosts: "${QUARKUS_REDIS_HOSTS:redis://redis:6379}"
+    hosts: "${QUARKUS_REDIS_HOSTS:redis://192.168.1.20:6379}"
     timeout: 10s
 
   # Cache Configuration
@@ -159,3 +159,9 @@ oauth2:
   features:
     mfa-enabled: true
     pkce-required: true
+  session:
+    ttl: 3600 # 1 hour
+  mfa:
+    time-step: 30 # seconds
+    code-length: 6
+    session-validity: 300 # 5 minutes

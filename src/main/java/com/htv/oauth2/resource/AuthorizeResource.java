@@ -5,6 +5,7 @@ import com.htv.oauth2.dto.request.*;
 import com.htv.oauth2.dto.response.*;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.service.auth.*;
+import com.htv.oauth2.security.UserContextProvider;
 import com.htv.oauth2.util.HttpUtil;
 import com.htv.oauth2.util.StringUtil;
 import jakarta.annotation.security.PermitAll;
@@ -28,8 +29,11 @@ public class AuthorizeResource {
     @Inject
     AuthenticationService authenticationService;
 
+    @Inject
+    UserContextProvider userContext;
+
     @Context
-    SecurityContext securityContext;
+    HttpHeaders httpHeaders;
 
     /**
      * Authorization endpoint - Step 1: Show login/consent page
@@ -56,7 +60,7 @@ public class AuthorizeResource {
             }
 
             // Check if user is authenticated
-            if (securityContext.getUserPrincipal() == null) {
+            if (userContext.getCurrentUser().isEmpty()) {
                 // Redirect to login with return URL
                 String returnUrl = uriInfo.getRequestUri().toString();
                 return Response.seeOther(
@@ -66,12 +70,26 @@ public class AuthorizeResource {
                 ).build();
             }
 
-            // User is authenticated, check consent
-            User user = getCurrentUser();
+            // User is authenticated, get user
+            User user = userContext.getCurrentUserOrThrow();
             Set<String> requestedScopes = StringUtil.splitScopes(scope);
 
-            // TODO: Check if consent is needed and show consent page
-            // For now, auto-approve
+            // Check if consent is needed
+            if (authorizationService.needsConsent(user,
+                    authorizationService.getClientByClientId(clientId),
+                    requestedScopes)) {
+                // Redirect to consent page
+                return Response.seeOther(
+                        UriBuilder.fromPath("/consent")
+                                .queryParam("client_id", clientId)
+                                .queryParam("redirect_uri", redirectUri)
+                                .queryParam("scope", scope)
+                                .queryParam("state", state)
+                                .queryParam("code_challenge", codeChallenge)
+                                .queryParam("code_challenge_method", codeChallengeMethod)
+                                .build()
+                ).build();
+            }
 
             AuthorizationRequest request = AuthorizationRequest.builder()
                     .responseType(responseType)
@@ -95,6 +113,7 @@ public class AuthorizeResource {
             return Response.seeOther(UriBuilder.fromUri(location).build()).build();
 
         } catch (OAuth2Exception e) {
+            log.error("Authorization error", e);
             // Redirect to client with error
             String location = HttpUtil.buildRedirectUri(redirectUri, Map.of(
                     "error", e.getError(),
@@ -105,9 +124,24 @@ public class AuthorizeResource {
         }
     }
 
-    private User getCurrentUser() {
-        // Get current authenticated user from security context
-        // This is a placeholder - implement based on your security setup
-        return new User();
+    /**
+     * Get client info for consent page helper
+     */
+    @GET
+    @Path("/client-info")
+    @PermitAll
+    public Response getClientInfo(@QueryParam("client_id") String clientId) {
+        try {
+            var client = authorizationService.getClientByClientId(clientId);
+            return Response.ok(Map.of(
+                    "clientId", client.getClientId(),
+                    "clientName", client.getClientName(),
+                    "description", client.getDescription() != null ? client.getDescription() : ""
+            )).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(ErrorResponse.invalidClient("Client not found"))
+                    .build();
+        }
     }
 }

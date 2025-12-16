@@ -29,4 +29,14 @@ public class RegisterResponse {
 
     @JsonProperty("created_at")
     private Instant createdAt;
+
+    @JsonProperty("mfa_required_setup")
+    private boolean mfaRequiredSetup;
+
+    @JsonProperty("mfa_secret_key")
+    private String mfaSecretKey;
+
+    @JsonProperty("mfa_qr_code_url")
+    private String mfaQrCodeUrl;
+
 }

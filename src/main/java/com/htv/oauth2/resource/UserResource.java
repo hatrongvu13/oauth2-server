@@ -3,6 +3,7 @@ package com.htv.oauth2.resource;
 import com.htv.oauth2.dto.request.RegisterRequest;
 import com.htv.oauth2.dto.request.UserUpdateRequest;
 import com.htv.oauth2.dto.response.ErrorResponse;
+import com.htv.oauth2.dto.response.RegisterResponse;
 import com.htv.oauth2.dto.response.UserResponse;
 import com.htv.oauth2.exception.OAuth2Exception;
 import jakarta.annotation.security.PermitAll;
@@ -14,6 +15,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.UnsupportedEncodingException;
 
 @Slf4j
 @Path("/api/users")
@@ -33,7 +36,7 @@ public class UserResource {
     @PermitAll
     public Response register(@Valid RegisterRequest request) {
         try {
-            UserResponse user = userService.registerUser(request);
+            RegisterResponse user = userService.registerUser(request);
             return Response.status(Response.Status.CREATED)
                     .entity(user)
                     .build();
@@ -43,6 +46,8 @@ public class UserResource {
                     .errorDescription(e.getErrorDescription())
                     .build();
             return Response.status(e.getHttpStatus()).entity(error).build();
+        } catch (UnsupportedEncodingException e) {
+            return Response.status(500).entity(e).build();
         }
     }
 

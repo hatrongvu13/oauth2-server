@@ -162,6 +162,14 @@ public class AuthorizationService {
     }
 
     /**
+     * Get client by client ID
+     */
+    public Client getClientByClientId(String clientId) {
+        return clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new InvalidClientException("Client not found: " + clientId));
+    }
+
+    /**
      * Check if user needs consent
      */
     public boolean needsConsent(User user, Client client, Set<String> requestedScopes) {
