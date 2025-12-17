@@ -95,12 +95,4 @@ public class CryptoUtil {
         return false;
     }
 
-    /**
-     * Generate TOTP secret for MFA
-     */
-    public static String generateTotpSecret() {
-        byte[] buffer = new byte[20];
-        getSecureRandom().nextBytes(buffer);
-        return Base64.getEncoder().encodeToString(buffer);
-    }
 }

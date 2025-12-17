@@ -6,6 +6,7 @@ import com.htv.oauth2.dto.response.ErrorResponse;
 import com.htv.oauth2.dto.response.RegisterResponse;
 import com.htv.oauth2.dto.response.UserResponse;
 import com.htv.oauth2.exception.OAuth2Exception;
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -57,6 +58,7 @@ public class UserResource {
      */
     @GET
     @Path("/me")
+    @Authenticated
     public Response getCurrentUser(@Context SecurityContext securityContext) {
         String userId = securityContext.getUserPrincipal().getName();
         UserResponse user = userService.findById(userId);

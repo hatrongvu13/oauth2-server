@@ -1,6 +1,7 @@
 package com.htv.oauth2.service.user;
 
 import com.htv.oauth2.domain.User;
+import com.htv.oauth2.dto.request.EnableMfaRequest;
 import com.htv.oauth2.dto.request.RegisterRequest;
 import com.htv.oauth2.dto.request.UserUpdateRequest;
 import com.htv.oauth2.dto.response.RegisterResponse;
@@ -79,6 +80,7 @@ public class UserService {
                 secretKey,
                 MFA_ISSUER_NAME
         );
+        String qrCodeBase64 = mfaService.generateQrCodeBase64(qrCodeUrl);
 
         log.info("User registered successfully: {}", user.getId());
         // 4. Trả về RegisterResponse
@@ -90,7 +92,7 @@ public class UserService {
                 .message("User registered successfully. MFA setup is required.")
                 .mfaRequiredSetup(true)
                 .mfaSecretKey(secretKey)
-                .mfaQrCodeUrl(qrCodeUrl)
+                .mfaQrCodeUrl("data:image/png;base64," + qrCodeBase64)
                 .build();
     }
 
@@ -107,8 +109,20 @@ public class UserService {
      * ENABLE MFA for the user (after verification)
      */
     @Transactional
-    public void enableMfa(User user) {
+    public void enableMfa(String userId, EnableMfaRequest request) {
         // Chỉ cần cập nhật trạng thái kích hoạt, vì Secret Key đã được lưu trước đó
+        User user = userRepository.findByIdOptional(userId).orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        String secretKey = user.getMfaSecret();
+
+        if (secretKey == null || user.getMfaEnabled()) {
+            throw new InvalidOperationException("MFA setup process not started or already enabled.");
+        }
+
+        // 1. Xác minh mã MFA (sử dụng secret key TẠM THỜI)
+        if (!mfaService.verifyMfaCode(user, request.getVerificationCode())) {
+            throw new InvalidMfaCodeException("MFA code is invalid.");
+        }
         user.setMfaEnabled(true);
         userRepository.persist(user);
         log.info("MFA successfully enabled for user {}", user.getId());

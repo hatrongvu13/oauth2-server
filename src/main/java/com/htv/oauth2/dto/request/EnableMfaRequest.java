@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EnableMfaRequest {
 
-    @NotBlank(message = "MFA secret is required")
-    private String mfaSecret;
+//    @NotBlank(message = "MFA secret is required")
+//    private String mfaSecret;
 
     @NotBlank(message = "Verification code is required")
     @Pattern(regexp = "^[0-9]{6}$", message = "Verification code must be 6 digits")

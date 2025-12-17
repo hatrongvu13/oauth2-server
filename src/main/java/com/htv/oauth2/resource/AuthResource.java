@@ -5,24 +5,18 @@ import com.htv.oauth2.domain.User;
 import com.htv.oauth2.dto.request.EnableMfaRequest;
 import com.htv.oauth2.dto.request.LoginRequest;
 import com.htv.oauth2.dto.request.MfaVerifyRequest;
-import com.htv.oauth2.dto.response.ErrorResponse;
-import com.htv.oauth2.dto.response.LoginResponse;
-import com.htv.oauth2.dto.response.SuccessResponse;
-import com.htv.oauth2.dto.response.TokenResponse;
-import com.htv.oauth2.exception.InvalidMfaCodeException;
-import com.htv.oauth2.exception.InvalidOperationException;
-import com.htv.oauth2.exception.MfaRequiredException;
-import com.htv.oauth2.exception.OAuth2Exception;
+import com.htv.oauth2.dto.response.*;
+import com.htv.oauth2.exception.*;
 import com.htv.oauth2.mapper.UserMapper;
-import com.htv.oauth2.security.UserContextProvider;
+import com.htv.oauth2.repository.UserRepository;
 import com.htv.oauth2.service.auth.AuthenticationService;
 import com.htv.oauth2.service.security.MfaService;
 import com.htv.oauth2.service.token.TokenService;
 import com.htv.oauth2.service.user.UserService;
+import io.quarkus.security.Authenticated;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -33,6 +27,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.time.Instant;
 import java.util.Map;
@@ -56,10 +51,13 @@ public class AuthResource {
     MfaService mfaService;
 
     @Inject
-    UserContextProvider userContext;
+    JsonWebToken jwt;
 
     @Inject
     UserMapper userMapper;
+
+    @Inject
+    UserRepository userRepository;
 
     // Hàm tiện ích để tạo ErrorResponse đồng nhất
     private Response buildErrorResponse(OAuth2Exception e, Response.Status defaultStatus) {
@@ -158,10 +156,10 @@ public class AuthResource {
     @PermitAll
     public Response verifyMfa(
             @Valid MfaVerifyRequest request,
-            @Context HttpServletRequest httpRequest,
+            @Context RoutingContext routingContext,
             @Context HttpHeaders headers
     ) {
-        String ipAddress = httpRequest.getRemoteAddr();
+        String ipAddress = routingContext.request().remoteAddress().hostAddress();
         String userAgent = headers.getHeaderString(HttpHeaders.USER_AGENT);
 
         try {
@@ -219,27 +217,20 @@ public class AuthResource {
     // Giả định: Người dùng đã login (có Access Token) hoặc đây là luồng Admin/User Profile.
     // Nếu đây là luồng đăng ký, thường client sẽ lưu secret và gọi API này.
     // Tạm thời, đặt PermitAll để cho phép truy cập sau đăng ký nếu bạn không yêu cầu login ngay.
-    @PermitAll
+    @Authenticated
     public Response enableMfa(@Valid EnableMfaRequest request) {
         try {
             // Lấy người dùng hiện tại (Giả định Auth mechanism đã xác thực UserID và đặt vào UserContext)
-            User user = userContext.getCurrentUserOrThrow();
+            String userId = jwt.getSubject();
 
-            String secretKey = user.getMfaSecret();
-
-            if (secretKey == null || user.getMfaEnabled()) {
-                throw new InvalidOperationException("MFA setup process not started or already enabled.");
-            }
-
-            // 1. Xác minh mã MFA (sử dụng secret key TẠM THỜI)
-            if (!mfaService.verifyMfaCode(user, request.getVerificationCode())) {
-                throw new InvalidMfaCodeException("MFA code is invalid.");
+            if (userId == null) {
+                return Response.status(Response.Status.UNAUTHORIZED).build();
             }
 
             // 2. Kích hoạt MFA chính thức và xóa mã MFA tạm thời khỏi bộ nhớ/DB
-            userService.enableMfa(user);
+            userService.enableMfa(userId, request);
 
-            log.info("MFA successfully enabled for user {}", user.getId());
+            log.info("MFA successfully enabled for user {}", userId);
             return Response.ok(SuccessResponse.of("MFA successfully enabled.")).build();
 
         } catch (OAuth2Exception e) {

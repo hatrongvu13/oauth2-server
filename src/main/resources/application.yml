@@ -165,3 +165,8 @@ oauth2:
     time-step: 30 # seconds
     code-length: 6
     session-validity: 300 # 5 minutes
+mp:
+  jwt:
+    verify:
+      issuer: https://oauth2.jaxtony.store
+      audiences: default-client-id
