@@ -59,7 +59,6 @@ public class AuthResource {
 
         Map<String, Object> info = null;
 
-        // Kiểm tra nếu là MfaRequiredException thì lấy mfaToken riêng biệt
         if (e instanceof MfaRequiredException) {
             info = Map.of("mfa_token", ((MfaRequiredException) e).getMfaToken());
         } else if (e.getAdditionalInfo() != null) {
