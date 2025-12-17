@@ -18,9 +18,15 @@ public class CacheService {
     private final KeyCommands<String> keyCommands;
 
     @Inject
-    public CacheService(RedisDataSource dataSource) {
-        this.valueCommands = dataSource.value(String.class, String.class);
-        this.keyCommands = dataSource.key(String.class);
+    public CacheService(RedisDataSource redisDataSource) {
+        this.valueCommands = redisDataSource.value(String.class, String.class);
+        this.keyCommands = redisDataSource.key(String.class);
+        try {
+            String response = redisDataSource.execute("PING").toString();
+            log.info("Redis Connect success: {}", response);
+        } catch (Exception e) {
+            log.error("Can't connect redis server: {}", e.getMessage());
+        }
     }
 
     /**
@@ -29,7 +35,9 @@ public class CacheService {
     public void put(String key, String value, long ttlSeconds) {
         try {
             valueCommands.setex(key, ttlSeconds, value);
-            log.debug("Cached value for key: {}", key);
+            log.info("Cached value for key: {}, ttl: {}, value: {}", key, ttlSeconds, value);
+            String testValue = valueCommands.get(key);
+            log.info("test value : {}", testValue);
         } catch (Exception e) {
             log.error("Failed to cache value for key: {}", key, e);
         }
@@ -54,7 +62,7 @@ public class CacheService {
     public void delete(String key) {
         try {
             valueCommands.getdel(key);
-            log.debug("Deleted cached value for key: {}", key);
+            log.info("Deleted cached value for key: {}", key);
         } catch (Exception e) {
             log.error("Failed to delete cached value for key: {}", key, e);
         }

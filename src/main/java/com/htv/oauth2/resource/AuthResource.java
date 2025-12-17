@@ -8,7 +8,6 @@ import com.htv.oauth2.dto.request.MfaVerifyRequest;
 import com.htv.oauth2.dto.response.*;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.mapper.UserMapper;
-import com.htv.oauth2.repository.UserRepository;
 import com.htv.oauth2.service.auth.AuthenticationService;
 import com.htv.oauth2.service.security.MfaService;
 import com.htv.oauth2.service.token.TokenService;
@@ -56,19 +55,25 @@ public class AuthResource {
     @Inject
     UserMapper userMapper;
 
-    @Inject
-    UserRepository userRepository;
-
-    // Hàm tiện ích để tạo ErrorResponse đồng nhất
     private Response buildErrorResponse(OAuth2Exception e, Response.Status defaultStatus) {
+
+        Map<String, Object> info = null;
+
+        // Kiểm tra nếu là MfaRequiredException thì lấy mfaToken riêng biệt
+        if (e instanceof MfaRequiredException) {
+            info = Map.of("mfa_token", ((MfaRequiredException) e).getMfaToken());
+        } else if (e.getAdditionalInfo() != null) {
+            info = Map.of("additional_data", e.getAdditionalInfo());
+        }
+
         ErrorResponse error = ErrorResponse.builder()
                 .error(e.getError())
                 .errorDescription(e.getErrorDescription())
                 .status(e.getHttpStatus())
                 .timestamp(Instant.now())
-                // Thêm additionalInfo nếu có (ví dụ: mfaToken)
-                .additionalInfo(e.getAdditionalInfo() != null ? Map.of("mfa_token", e.getAdditionalInfo()) : null)
+                .additionalInfo(info)
                 .build();
+
         return Response.status(e.getHttpStatus()).entity(error).build();
     }
 
@@ -105,10 +110,7 @@ public class AuthResource {
 
             // --- GIẢ ĐỊNH LOGIC XÁC ĐỊNH CLIENT VÀ SCOPE ---
             // Giả định Client và Scopes Mặc định
-            Client defaultClient = new Client();
-            defaultClient.setClientId("default-client-id");
-            defaultClient.setAccessTokenValidity(3600);
-            defaultClient.setRefreshTokenValidity(7200);
+            Client defaultClient = createDefaultClient();
             Set<String> defaultScopes = Set.of("profile", "email");
 
             // 2. Generate Tokens
@@ -238,5 +240,13 @@ public class AuthResource {
         } catch (Exception e) {
             return buildInternalServerError(e);
         }
+    }
+
+    private Client createDefaultClient() {
+        Client client = new Client();
+        client.setClientId("default-client-id");
+        client.setAccessTokenValidity(3600);
+        client.setRefreshTokenValidity(7200);
+        return client;
     }
 }

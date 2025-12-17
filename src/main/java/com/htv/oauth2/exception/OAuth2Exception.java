@@ -1,8 +1,10 @@
 package com.htv.oauth2.exception;
 
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class OAuth2Exception extends RuntimeException {
 
     private final String error;
