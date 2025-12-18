@@ -9,7 +9,7 @@ import com.htv.oauth2.dto.response.UserResponse;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.repository.UserRepository;
-import com.htv.oauth2.service.security.MfaService;
+import com.htv.oauth2.service.mfa.MfaService;
 import com.htv.oauth2.service.security.PasswordService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

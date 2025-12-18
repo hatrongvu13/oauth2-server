@@ -74,13 +74,11 @@ quarkus:
 
   # Logging
   log:
-    # Sử dụng biến môi trường cho Level chính
     level: "${QUARKUS_LOG_LEVEL:INFO}"
     console:
       enable: true
       format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
     category:
-      # Sử dụng biến môi trường cho package của ứng dụng
       "com.htv.oauth2": "${QUARKUS_LOG_CATEGORY_COM_HTV_OAUTH2_LEVEL:DEBUG}"
       "org.hibernate": INFO
       "io.quarkus": INFO
@@ -94,6 +92,9 @@ quarkus:
   # JWT Configuration (Giữ nguyên)
   smallrye-jwt:
     enabled: true
+    path:
+      private-key: "${SMALLRYE_JWT_PATH_PRIVATE_KEY:/keys/privateKey.pem}"
+      public-key: "${SMALLRYE_JWT_PATH_PUBLIC_KEY:/keys/publicKey.pem}"
 
   # OpenAPI/Swagger (Giữ nguyên)
   smallrye-openapi:
@@ -110,7 +111,6 @@ quarkus:
   # Health Check (Giữ nguyên)
   smallrye-health:
     ui:
-      enable: true
       root-path: /q/health-ui
 
   # Metrics (Giữ nguyên)
@@ -168,5 +168,7 @@ oauth2:
 mp:
   jwt:
     verify:
-      issuer: https://oauth2.jaxtony.store
+      issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
       audiences: default-client-id
+      publickey:
+        location: "${SMALLRYE_JWT_PATH_PUBLIC_KEY:/keys/publicKey.pem}"

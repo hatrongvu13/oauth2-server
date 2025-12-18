@@ -14,6 +14,8 @@ data:
   db_username: YWRtaW4=
   # DB_PASSWORD: admin (YWRtaW4=)
   db_password: YWRtaW4=
+  privateKey.pem: <CHUỖI_BASE64_CỦA_PRIVATE_KEY>
+  publicKey.pem: <CHUỖI_BASE64_CỦA_PUBLIC_KEY>
 
 ---
 

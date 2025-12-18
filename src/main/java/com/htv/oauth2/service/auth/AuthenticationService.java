@@ -5,7 +5,7 @@ import com.htv.oauth2.dto.request.LoginRequest;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.repository.UserRepository;
 import com.htv.oauth2.service.AuditService;
-import com.htv.oauth2.service.security.MfaService;
+import com.htv.oauth2.service.mfa.MfaService;
 import com.htv.oauth2.service.security.PasswordService;
 import com.htv.oauth2.service.user.UserService;
 import jakarta.enterprise.context.ApplicationScoped;

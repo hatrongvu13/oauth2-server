@@ -9,7 +9,7 @@ import com.htv.oauth2.dto.response.*;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.service.auth.AuthenticationService;
-import com.htv.oauth2.service.security.MfaService;
+import com.htv.oauth2.service.mfa.MfaService;
 import com.htv.oauth2.service.token.TokenService;
 import com.htv.oauth2.service.user.UserService;
 import io.quarkus.security.Authenticated;
