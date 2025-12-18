@@ -15,15 +15,11 @@ public class JwtUtil {
     @ConfigProperty(name = "oauth2.jwt.issuer")
     String issuer;
 
-    @ConfigProperty(name = "oauth2.jwt.access-token-expiry")
+    @ConfigProperty(name = "oauth2.jwt.access-token-expiry", defaultValue = "3600")
     Long accessTokenExpiry;
-
-    @ConfigProperty(name = "oauth2.jwt.refresh-token-expiry")
-    Long refreshTokenExpiry;
 
     /**
      * Generate Access Token (JWT)
-     * SmallRye JWT will automatically use the configured private key
      */
     public String generateAccessToken(String userId, String clientId, Set<String> scopes) {
         Instant now = Instant.now();
@@ -38,6 +34,7 @@ public class JwtUtil {
                     .claim("scope", String.join(" ", scopes))
                     .claim("client_id", clientId)
                     .claim("token_type", "access_token")
+                    .jws()
                     .sign(); // Will use configured private key
 
         } catch (Exception e) {
@@ -47,14 +44,7 @@ public class JwtUtil {
     }
 
     /**
-     * Generate Refresh Token (opaque token, not JWT)
-     */
-    public String generateRefreshToken() {
-        return CryptoUtil.generateSecureToken(64);
-    }
-
-    /**
-     * Generate ID Token (for OpenID Connect)
+     * Generate ID Token
      */
     public String generateIdToken(String userId, String clientId, String email, String name) {
         Instant now = Instant.now();
@@ -69,22 +59,20 @@ public class JwtUtil {
                     .claim("email", email)
                     .claim("name", name)
                     .claim("email_verified", true)
+                    .jws()
                     .sign();
-
         } catch (Exception e) {
-            log.error("Failed to generate ID token", e);
-            throw new RuntimeException("ID token generation failed", e);
+            log.error("Failed to sign ID token: {}", e.getMessage());
+            throw new RuntimeException("ID token signing failed", e);
         }
     }
 
-    /**
-     * Validate JWT structure (basic check)
-     */
+    public String generateRefreshToken() {
+        return CryptoUtil.generateSecureToken(64);
+    }
+
     public boolean isValidJwtFormat(String token) {
-        if (token == null || token.trim().isEmpty()) {
-            return false;
-        }
-        String[] parts = token.split("\\.");
-        return parts.length == 3;
+        if (token == null || token.trim().isEmpty()) return false;
+        return token.split("\\.").length == 3;
     }
 }

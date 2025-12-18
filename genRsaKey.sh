@@ -1,9 +1,20 @@
 openssl genrsa -out src/main/resources/keys/private_key.pem 2048
-openssl rsa -in src/main/resources/keys/private_key.pem -pubout -out src/main/resources/keys/public_key.pem
 
-#
-# Tạo Private Key chuẩn PKCS#8
-openssl genpkey -algorithm RSA -out src/main/resources/keys/private_key.pem -pkeyopt rsa_keygen_bits:2048
+# Convert sang PKCS#8 format (QUAN TRỌNG!)
+openssl pkcs8 -topk8 -inform PEM -outform PEM \
+  -in src/main/resources/keys/private_key.pem \
+  -out src/main/resources/keys/private_key_pkcs8.pem \
+  -nocrypt
 
-# Tạo Public Key từ Private Key trên
-openssl rsa -in src/main/resources/keys/private_key.pem -pubout -out src/main/resources/keys/public_key.pem
+# Replace file cũ
+mv src/main/resources/keys/private_key_pkcs8.pem src/main/resources/keys/private_key.pem
+
+# Generate public key
+openssl rsa -in src/main/resources/keys/private_key.pem \
+  -pubout -out src/main/resources/keys/public_key.pem
+
+# Java generater
+mkdir -p src/main/resources/keys
+javac GenerateKeys.java
+java GenerateKeys
+rm GenerateKeys.class GenerateKeys.java

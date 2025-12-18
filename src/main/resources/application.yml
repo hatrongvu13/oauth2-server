@@ -53,8 +53,8 @@ quarkus:
   # ============================================
   datasource:
     db-kind: postgresql
-    username: ${DB_USERNAME:oauth2user}
-    password: ${DB_PASSWORD:changeme}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
 
     jdbc:
       url: ${DB_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}
@@ -133,13 +133,14 @@ quarkus:
 
     # Category levels
     category:
-      "com.htv.oauth2": ${LOG_APP_LEVEL:DEBUG}
+      "com.htv.oauth2": ${LOG_APP_LEVEL:WARN}
       "org.hibernate.SQL": ${LOG_HIBERNATE_SQL:WARN}
       "org.hibernate.type.descriptor.sql.BasicBinder": ${LOG_HIBERNATE_BINDER:WARN}
       "io.quarkus": ${LOG_QUARKUS:INFO}
       "io.vertx": ${LOG_VERTX:WARN}
       "org.jboss": ${LOG_JBOSS:WARN}
       "org.flywaydb": ${LOG_FLYWAY:INFO}
+      "io.quarkus.bootstrap.classloading": INFO
 
   # ============================================
   # Security Configuration
@@ -156,14 +157,13 @@ quarkus:
     enabled: true
 
     # Sign configuration (for token generation)
-    sign:
-      key:
-        location: ${JWT_SIGN_KEY_LOCATION:keys/private_key.pem}
+    path:
+      private-key: ${JWT_SIGN_KEY_LOCATION:classpath:keys/private_key.pem}
 
     # Verify configuration (for token validation)
-    verify:
-      key:
-        location: ${JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}
+#    verify:
+#      key:
+#        location: ${JWT_VERIFY_KEY_LOCATION:classpath:keys/public_key.pem}
 
     # Issuer (must match oauth2.jwt.issuer)
     issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
@@ -288,8 +288,8 @@ mp:
     verify:
       issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
       audiences: ${JWT_AUDIENCE:default-client-id}
-      publickey:
-        location: ${JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}
+#      publickey:
+#        location: ${JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}
 
 # ============================================
 # OAuth2 Custom Configuration
