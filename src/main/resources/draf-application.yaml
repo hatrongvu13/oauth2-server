@@ -3,22 +3,6 @@
 # ============================================
 
 quarkus:
-  application:
-    name: oauth2-server
-    version: 1.0.0
-
-  # HTTP Configuration
-  http:
-    port: 8080
-    cors:
-      ~: true
-      origins: "http://localhost:3000,http://localhost:8080"
-      methods: "GET,POST,PUT,DELETE,OPTIONS"
-      headers: "accept,authorization,content-type,x-requested-with"
-      exposed-headers: "Content-Disposition"
-      access-control-max-age: 24H
-
-  # Native Image Configuration
   native:
     additional-build-args:
       - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
@@ -26,14 +10,35 @@ quarkus:
       - -H:+ReportExceptionStackTraces
       - --enable-all-security-services
       - --allow-incomplete-classpath
+  application:
+    name: oauth2-server
+    version: 1.0.0
+
+  # ARC/CDI Configuration (Giữ nguyên, thường không cần dùng Env)
+  arc:
+    unremovable-types:
+      - com.htv.oauth2.config.LoggingInterceptor
+    exclude-types:
+      - com.htv.oauth2.config.Logged
+
+  # HTTP Configuration
+  http:
+    port: ${QUARKUS_HTTP_PORT:8080} #(Thường giữ nguyên, hoặc dùng ${QUARKUS_HTTP_PORT:8080})
+    cors:
+      ~: true
+      origins: "${QUARKUS_HTTP_CORS_ORIGINS:*}"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+      headers: "accept,authorization,content-type,x-requested-with"
+      exposed-headers: "Content-Disposition"
+      access-control-max-age: 24H
 
   # Database Configuration
   datasource:
     db-kind: postgresql
-    username: oauth2user
-    password: oauth2pass
+    username: "${QUARKUS_DATASOURCE_USERNAME:root}"
+    password: "${QUARKUS_DATASOURCE_PASSWORD:root}"
     jdbc:
-      url: jdbc:postgresql://localhost:5432/oauth2db
+      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://171.229.223.206:5432/oauth2db}"
       max-size: 16
       min-size: 4
 
@@ -41,7 +46,7 @@ quarkus:
     database:
       generation: none
     log:
-      sql: false
+      sql: "${QUARKUS_HIBERNATE_ORM_LOG_SQL:false}"
       bind-parameters: true
 
   # Flyway Migration
@@ -52,7 +57,7 @@ quarkus:
 
   # Redis Configuration
   redis:
-    hosts: redis://localhost:6379
+    hosts: "${QUARKUS_REDIS_HOSTS:redis://171.229.223.206:6379}"
     timeout: 10s
 
   # Cache Configuration
@@ -69,46 +74,59 @@ quarkus:
 
   # Logging
   log:
-    level: INFO
+    level: "${QUARKUS_LOG_LEVEL:INFO}"
     console:
       enable: true
       format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
     category:
-      "com.htv.oauth2":
-        level: DEBUG
-      "org.hibernate":
-        level: INFO
-      "io.quarkus":
-        level: INFO
+      "com.htv.oauth2": "${QUARKUS_LOG_CATEGORY_COM_HTV_OAUTH2_LEVEL:DEBUG}"
+      "org.hibernate": INFO
+      "io.quarkus": INFO
 
-  # Security
+  # Security (Giữ nguyên)
   security:
     users:
       embedded:
         enabled: false
 
-  # JWT Configuration
-  smallrye-jwt:
-    enabled: true
-
-  # OpenAPI/Swagger
+    # JWT Configuration (Giữ nguyên)
+    # JWT Configuration
+    smallrye-jwt:
+      enabled: true
+      # Sign configuration (cho việc tạo token)
+      sign:
+        key:
+          location: "${SMALLRYE_JWT_SIGN_KEY_LOCATION:keys/private_key.pem}"
+      # Verify configuration (cho việc xác thực token)
+      verify:
+        key:
+          location: "${SMALLRYE_JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}"
+      # Issuer
+      issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
+      # Signature algorithm
+      new-token:
+        signature-algorithm: RS256
+      path:
+        private-key: "${SMALLRYE_JWT_PATH_PRIVATE_KEY:keys/private_key.pem}"
+        public-key: "${SMALLRYE_JWT_PATH_PUBLIC_KEY:keys/public_key.pem}"
+  # OpenAPI/Swagger (Giữ nguyên)
   smallrye-openapi:
     path: /openapi
     info-title: OAuth2 Authorization Server API
     info-version: 1.0.0
     info-description: Production-ready OAuth2 Authorization Server
-    info-contact-email: admin@example.com
+    info-contact-email: hatrongvu13@gmail.com
 
   swagger-ui:
     always-include: true
     path: /swagger-ui
 
-  # Health Check
+  # Health Check (Giữ nguyên)
   smallrye-health:
     ui:
-      enable: true
+      root-path: /q/health-ui
 
-  # Metrics
+  # Metrics (Giữ nguyên)
   micrometer:
     enabled: true
     export:
@@ -116,7 +134,7 @@ quarkus:
         enabled: true
         path: /metrics
 
-  # Scheduler
+  # Scheduler (Giữ nguyên)
   scheduler:
     enabled: true
 
@@ -127,136 +145,43 @@ quarkus:
 oauth2:
   # JWT Configuration
   jwt:
-    issuer: https://oauth2.htv.com
-    access-token-expiry: 3600      # 1 hour
-    refresh-token-expiry: 86400    # 24 hours
+    issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
+    access-token-expiry: "${OAUTH2_JWT_ACCESS_TOKEN_EXPIRY:3600}"
+    refresh-token-expiry: "${OAUTH2_JWT_REFRESH_TOKEN_EXPIRY:86400}"
 
   # Authorization Code Configuration
   authorization-code:
-    validity: 300                  # 5 minutes
+    validity: 300
 
   # Rate Limiting
   rate-limit:
     login:
-      max-attempts: 5
-      window-seconds: 900          # 15 minutes
+      max-attempts: "${OAUTH2_RATE_LIMIT_LOGIN_MAX_ATTEMPTS:5}"
+      window-seconds: 900
     token:
       max-requests: 100
-      window-seconds: 3600         # 1 hour
+      window-seconds: 3600
 
-  # Account Security
+  # Account Security (Giữ nguyên)
   security:
     max-failed-login-attempts: 5
-    account-lock-duration: 900     # 15 minutes
+    account-lock-duration: 900
     password-min-length: 8
 
-  # Features
+  # Features (Giữ nguyên)
   features:
     mfa-enabled: true
     pkce-required: true
-
----
-# ============================================
-# Development Profile
-# ============================================
-
-"%dev":
-  quarkus:
-    datasource:
-      username: postgres
-      password: postgres
-      jdbc:
-        url: jdbc:postgresql://localhost:5432/oauth2db
-
-    hibernate-orm:
-      log:
-        sql: true
-
-    log:
-      level: DEBUG
-      category:
-        "com.htv.oauth2":
-          level: DEBUG
-
-    smallrye-health:
-      ui:
-        enable: true
-
-    redis:
-      hosts: redis://localhost:6379
-
-  oauth2:
-    jwt:
-      issuer: http://localhost:8080
-
----
-# ============================================
-# Test Profile
-# ============================================
-
-"%test":
-  quarkus:
-    datasource:
-      username: test
-      password: test
-      jdbc:
-        url: jdbc:postgresql://localhost:5433/oauth2db_test
-
-    hibernate-orm:
-      database:
-        generation: drop-and-create
-
-    flyway:
-      migrate-at-start: false
-
-    redis:
-      hosts: redis://localhost:6380
-
-  oauth2:
-    jwt:
-      issuer: http://localhost:8081
-
----
-# ============================================
-# Production Profile
-# ============================================
-
-"%prod":
-  quarkus:
-    datasource:
-      username: ${DB_USERNAME}
-      password: ${DB_PASSWORD}
-      jdbc:
-        url: ${DB_URL:jdbc:postgresql://postgres:5432/oauth2db}
-        max-size: 32
-
-    hibernate-orm:
-      log:
-        sql: false
-
-    log:
-      level: INFO
-      category:
-        "com.htv.oauth2":
-          level: INFO
-
-    http:
-      port: ${PORT:8080}
-      cors:
-        origins: ${CORS_ORIGINS:https://app.example.com}
-
-    redis:
-      hosts: ${REDIS_URL:redis://redis:6379}
-      password: ${REDIS_PASSWORD:}
-
-  oauth2:
-    jwt:
-      issuer: ${JWT_ISSUER:https://oauth2.example.com}
-      access-token-expiry: ${ACCESS_TOKEN_EXPIRY:3600}
-      refresh-token-expiry: ${REFRESH_TOKEN_EXPIRY:86400}
-
-    rate-limit:
-      login:
-        max-attempts: ${RATE_LIMIT_LOGIN_MAX:5}
-      token:
-        max-requests: ${RATE_LIMIT_TOKEN_MAX:100}
+  session:
+    ttl: 3600 # 1 hour
+  mfa:
+    time-step: 30 # seconds
+    code-length: 6
+    session-validity: 300 # 5 minutes
+mp:
+  jwt:
+    verify:
+      issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
+      audiences: default-client-id
+      publickey:
+        location: "${SMALLRYE_JWT_PATH_PUBLIC_KEY:classpath:keys/public_key.pem}"

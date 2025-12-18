@@ -5,52 +5,52 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import java.nio.charset.StandardCharsets;
-import java.security.*;
 import java.time.Instant;
-import java.util.*;
-
-import static com.htv.oauth2.util.CryptoUtil.generateSecureToken;
+import java.util.Set;
 
 @Slf4j
 @ApplicationScoped
 public class JwtUtil {
 
-    @ConfigProperty(name = "oauth2.jwt.issuer", defaultValue = "https://oauth2.htv.com")
+    @ConfigProperty(name = "oauth2.jwt.issuer")
     String issuer;
 
-    @ConfigProperty(name = "oauth2.jwt.access-token-expiry", defaultValue = "3600") // 1 hour
+    @ConfigProperty(name = "oauth2.jwt.access-token-expiry")
     Long accessTokenExpiry;
 
-    @ConfigProperty(name = "oauth2.jwt.refresh-token-expiry", defaultValue = "86400") // 24 hours
+    @ConfigProperty(name = "oauth2.jwt.refresh-token-expiry")
     Long refreshTokenExpiry;
 
     /**
      * Generate Access Token (JWT)
+     * SmallRye JWT will automatically use the configured private key
      */
     public String generateAccessToken(String userId, String clientId, Set<String> scopes) {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(accessTokenExpiry);
 
-        return Jwt.issuer(issuer)
-                .subject(userId)
-                .audience(clientId)
-                .issuedAt(now)
-                .expiresAt(expiresAt)
-                .claim("scope", String.join(" ", scopes))
-                .claim("client_id", clientId)
-                .claim("token_type", "access_token")
-                .jws()
-                .sign();
+        try {
+            return Jwt.issuer(issuer)
+                    .subject(userId)
+                    .audience(clientId)
+                    .issuedAt(now)
+                    .expiresAt(expiresAt)
+                    .claim("scope", String.join(" ", scopes))
+                    .claim("client_id", clientId)
+                    .claim("token_type", "access_token")
+                    .sign(); // Will use configured private key
+
+        } catch (Exception e) {
+            log.error("Failed to generate access token", e);
+            throw new RuntimeException("Token generation failed", e);
+        }
     }
 
     /**
-     * Generate Refresh Token (JWT or random string)
+     * Generate Refresh Token (opaque token, not JWT)
      */
     public String generateRefreshToken() {
-        // For simplicity, using secure random string
-        // In production, you might want to use JWT with longer expiry
-        return generateSecureToken(64);
+        return CryptoUtil.generateSecureToken(64);
     }
 
     /**
@@ -60,16 +60,21 @@ public class JwtUtil {
         Instant now = Instant.now();
         Instant expiresAt = now.plusSeconds(accessTokenExpiry);
 
-        return Jwt.issuer(issuer)
-                .subject(userId)
-                .audience(clientId)
-                .issuedAt(now)
-                .expiresAt(expiresAt)
-                .claim("email", email)
-                .claim("name", name)
-                .claim("email_verified", true)
-                .jws()
-                .sign();
+        try {
+            return Jwt.issuer(issuer)
+                    .subject(userId)
+                    .audience(clientId)
+                    .issuedAt(now)
+                    .expiresAt(expiresAt)
+                    .claim("email", email)
+                    .claim("name", name)
+                    .claim("email_verified", true)
+                    .sign();
+
+        } catch (Exception e) {
+            log.error("Failed to generate ID token", e);
+            throw new RuntimeException("ID token generation failed", e);
+        }
     }
 
     /**
@@ -81,30 +86,5 @@ public class JwtUtil {
         }
         String[] parts = token.split("\\.");
         return parts.length == 3;
-    }
-
-    /**
-     * Extract claims from JWT (without verification)
-     * Use only for logging/debugging
-     */
-    public Map<String, Object> extractClaimsUnsafe(String jwt) {
-        try {
-            String[] parts = jwt.split("\\.");
-            if (parts.length != 3) {
-                return Collections.emptyMap();
-            }
-
-            String payload = new String(
-                    Base64.getUrlDecoder().decode(parts[1]),
-                    StandardCharsets.UTF_8
-            );
-
-            // Parse JSON manually or use a library
-            // This is a simplified version
-            return Collections.emptyMap(); // Implement JSON parsing
-        } catch (Exception e) {
-            log.error("Failed to extract claims from JWT", e);
-            return Collections.emptyMap();
-        }
     }
 }

@@ -1,8 +1,19 @@
 # ============================================
-# Application Configuration
+# OAuth2 Server - Production Configuration
+# Hỗ trợ K8s/K3s ConfigMap & Environment Variables
 # ============================================
 
 quarkus:
+  # ============================================
+  # Application Info
+  # ============================================
+  application:
+    name: ${APP_NAME:oauth2-server}
+    version: ${APP_VERSION:1.0.0}
+
+  # ============================================
+  # Native Build Configuration
+  # ============================================
   native:
     additional-build-args:
       - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
@@ -10,165 +21,376 @@ quarkus:
       - -H:+ReportExceptionStackTraces
       - --enable-all-security-services
       - --allow-incomplete-classpath
-  application:
-    name: oauth2-server
-    version: 1.0.0
 
-  # ARC/CDI Configuration (Giữ nguyên, thường không cần dùng Env)
+  # ============================================
+  # ARC/CDI Configuration
+  # ============================================
   arc:
     unremovable-types:
       - com.htv.oauth2.config.LoggingInterceptor
     exclude-types:
       - com.htv.oauth2.config.Logged
 
-  # HTTP Configuration
+  # ============================================
+  # HTTP Server Configuration
+  # ============================================
   http:
-    port: ${QUARKUS_HTTP_PORT:8080} #(Thường giữ nguyên, hoặc dùng ${QUARKUS_HTTP_PORT:8080})
+    port: ${HTTP_PORT:8080}
+    host: ${HTTP_HOST:0.0.0.0}
+
+    # CORS Configuration
     cors:
       ~: true
-      origins: "${QUARKUS_HTTP_CORS_ORIGINS:*}"
-      methods: "GET,POST,PUT,DELETE,OPTIONS"
-      headers: "accept,authorization,content-type,x-requested-with"
-      exposed-headers: "Content-Disposition"
-      access-control-max-age: 24H
+      origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8080}
+      methods: ${CORS_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
+      headers: ${CORS_HEADERS:accept,authorization,content-type,x-requested-with,x-api-key}
+      exposed-headers: ${CORS_EXPOSED_HEADERS:Content-Disposition,X-Total-Count}
+      access-control-max-age: ${CORS_MAX_AGE:24H}
+      access-control-allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
 
-  # Database Configuration
+  # ============================================
+  # Database Configuration (PostgreSQL)
+  # ============================================
   datasource:
     db-kind: postgresql
-    username: "${QUARKUS_DATASOURCE_USERNAME:root}"
-    password: "${QUARKUS_DATASOURCE_PASSWORD:root}"
-    jdbc:
-      url: "${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}"
-      max-size: 16
-      min-size: 4
+    username: ${DB_USERNAME:oauth2user}
+    password: ${DB_PASSWORD:changeme}
 
+    jdbc:
+      url: ${DB_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}
+      max-size: ${DB_POOL_MAX:16}
+      min-size: ${DB_POOL_MIN:4}
+      acquisition-timeout: ${DB_ACQUISITION_TIMEOUT:10}
+      idle-removal-interval: ${DB_IDLE_REMOVAL_INTERVAL:5M}
+      max-lifetime: ${DB_MAX_LIFETIME:30M}
+      leak-detection-interval: ${DB_LEAK_DETECTION:5M}
+      validation-query-sql: SELECT 1
+      enable-metrics: ${DB_ENABLE_METRICS:true}
+
+  # ============================================
+  # Hibernate ORM Configuration
+  # ============================================
   hibernate-orm:
     database:
-      generation: none
+      generation: ${DB_GENERATION:none}
     log:
-      sql: "${QUARKUS_HIBERNATE_ORM_LOG_SQL:false}"
-      bind-parameters: true
+      sql: ${HIBERNATE_LOG_SQL:false}
+      bind-parameters: ${HIBERNATE_LOG_PARAMS:false}
+      format-sql: ${HIBERNATE_FORMAT_SQL:false}
+    jdbc:
+      statement-batch-size: ${HIBERNATE_BATCH_SIZE:20}
 
+  # ============================================
   # Flyway Migration
+  # ============================================
   flyway:
-    migrate-at-start: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
+    migrate-at-start: ${FLYWAY_MIGRATE:true}
+    baseline-on-migrate: ${FLYWAY_BASELINE:true}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:1.0.0}
+    baseline-description: ${FLYWAY_BASELINE_DESC:Initial baseline}
+    clean-at-start: ${FLYWAY_CLEAN:false}
 
+  # ============================================
   # Redis Configuration
+  # ============================================
   redis:
-    hosts: "${QUARKUS_REDIS_HOSTS:redis://localhost:6379}"
-    timeout: 10s
+    hosts: ${REDIS_HOSTS:redis://localhost:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: ${REDIS_TIMEOUT:10s}
+    max-pool-size: ${REDIS_POOL_MAX:20}
+    max-pool-waiting: ${REDIS_POOL_WAITING:24}
 
-  # Cache Configuration
+  # ============================================
+  # Cache Configuration (Caffeine)
+  # ============================================
   cache:
     caffeine:
       "user-cache":
-        initial-capacity: 100
-        maximum-size: 1000
-        expire-after-write: 10M
+        initial-capacity: ${CACHE_USER_INITIAL:100}
+        maximum-size: ${CACHE_USER_MAX:1000}
+        expire-after-write: ${CACHE_USER_EXPIRE:10M}
       "client-cache":
-        initial-capacity: 50
-        maximum-size: 500
-        expire-after-write: 30M
+        initial-capacity: ${CACHE_CLIENT_INITIAL:50}
+        maximum-size: ${CACHE_CLIENT_MAX:500}
+        expire-after-write: ${CACHE_CLIENT_EXPIRE:30M}
+      "token-cache":
+        initial-capacity: ${CACHE_TOKEN_INITIAL:200}
+        maximum-size: ${CACHE_TOKEN_MAX:2000}
+        expire-after-write: ${CACHE_TOKEN_EXPIRE:5M}
 
-  # Logging
+  # ============================================
+  # Logging Configuration
+  # ============================================
   log:
-    level: "${QUARKUS_LOG_LEVEL:INFO}"
+    level: ${LOG_LEVEL:INFO}
     console:
-      enable: true
-      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
-    category:
-      "com.htv.oauth2": "${QUARKUS_LOG_CATEGORY_COM_HTV_OAUTH2_LEVEL:DEBUG}"
-      "org.hibernate": INFO
-      "io.quarkus": INFO
+      enable: ${LOG_CONSOLE_ENABLE:true}
+      format: ${LOG_FORMAT:%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{2.}] (%t) %s%e%n}
+      json: ${LOG_JSON:false}
 
-  # Security (Giữ nguyên)
+    # Category levels
+    category:
+      "com.htv.oauth2": ${LOG_APP_LEVEL:DEBUG}
+      "org.hibernate.SQL": ${LOG_HIBERNATE_SQL:WARN}
+      "org.hibernate.type.descriptor.sql.BasicBinder": ${LOG_HIBERNATE_BINDER:WARN}
+      "io.quarkus": ${LOG_QUARKUS:INFO}
+      "io.vertx": ${LOG_VERTX:WARN}
+      "org.jboss": ${LOG_JBOSS:WARN}
+      "org.flywaydb": ${LOG_FLYWAY:INFO}
+
+  # ============================================
+  # Security Configuration
+  # ============================================
   security:
     users:
       embedded:
         enabled: false
 
-  # JWT Configuration (Giữ nguyên)
+  # ============================================
+  # JWT Configuration (SmallRye JWT)
+  # ============================================
   smallrye-jwt:
     enabled: true
-    path:
-      private-key: "${SMALLRYE_JWT_PATH_PRIVATE_KEY:/keys/privateKey.pem}"
-      public-key: "${SMALLRYE_JWT_PATH_PUBLIC_KEY:/keys/publicKey.pem}"
 
-  # OpenAPI/Swagger (Giữ nguyên)
+    # Sign configuration (for token generation)
+    sign:
+      key:
+        location: ${JWT_SIGN_KEY_LOCATION:keys/private_key.pem}
+
+    # Verify configuration (for token validation)
+    verify:
+      key:
+        location: ${JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}
+
+    # Issuer (must match oauth2.jwt.issuer)
+    issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
+
+    # Token configuration
+    new-token:
+      signature-algorithm: ${JWT_ALGORITHM:RS256}
+      issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
+      audience: ${JWT_AUDIENCE:default-client-id}
+      lifespan: ${JWT_LIFESPAN:3600}
+
+  # ============================================
+  # OpenAPI/Swagger Configuration
+  # ============================================
   smallrye-openapi:
-    path: /openapi
-    info-title: OAuth2 Authorization Server API
-    info-version: 1.0.0
-    info-description: Production-ready OAuth2 Authorization Server
-    info-contact-email: hatrongvu13@gmail.com
+    path: ${OPENAPI_PATH:/openapi}
+    info-title: ${OPENAPI_TITLE:OAuth2 Authorization Server API}
+    info-version: ${OPENAPI_VERSION:1.0.0}
+    info-description: ${OPENAPI_DESC:Production-ready OAuth2 Authorization Server with MFA support}
+    info-contact-email: ${OPENAPI_CONTACT:hatrongvu13@gmail.com}
+    info-contact-name: ${OPENAPI_CONTACT_NAME:OAuth2 Team}
+    servers: ${OPENAPI_SERVERS:https://oauth2.jaxtony.store}
 
   swagger-ui:
-    always-include: true
-    path: /swagger-ui
+    always-include: ${SWAGGER_ENABLED:true}
+    path: ${SWAGGER_PATH:/swagger-ui}
+    oauth2-redirect-url: ${SWAGGER_OAUTH2_REDIRECT:/swagger-ui/oauth2-redirect.html}
 
-  # Health Check (Giữ nguyên)
+  # ============================================
+  # Health Check Configuration
+  # ============================================
   smallrye-health:
     ui:
-      root-path: /q/health-ui
+      enable: ${HEALTH_UI_ENABLED:true}
+      root-path: ${HEALTH_UI_PATH:/q/health-ui}
+    liveness-path: ${HEALTH_LIVENESS_PATH:/q/health/live}
+    readiness-path: ${HEALTH_READINESS_PATH:/q/health/ready}
 
-  # Metrics (Giữ nguyên)
+  # ============================================
+  # Metrics Configuration (Prometheus)
+  # ============================================
   micrometer:
-    enabled: true
+    enabled: ${METRICS_ENABLED:true}
+    binder:
+      jvm: ${METRICS_JVM:true}
+      system: ${METRICS_SYSTEM:true}
+      http-server: ${METRICS_HTTP:true}
     export:
       prometheus:
-        enabled: true
-        path: /metrics
+        enabled: ${METRICS_PROMETHEUS:true}
+        path: ${METRICS_PATH:/q/metrics}
+        default-registry: ${METRICS_DEFAULT_REGISTRY:true}
 
-  # Scheduler (Giữ nguyên)
+  # ============================================
+  # Scheduler Configuration
+  # ============================================
   scheduler:
-    enabled: true
+    enabled: ${SCHEDULER_ENABLED:true}
+    start-mode: ${SCHEDULER_START_MODE:normal}
+
+  # ============================================
+  # Container Image Configuration (for K8s)
+  # ============================================
+  container-image:
+    registry: ${CONTAINER_REGISTRY:docker.io}
+    group: ${CONTAINER_GROUP:jaxtony}
+    name: ${CONTAINER_NAME:oauth2-server}
+    tag: ${CONTAINER_TAG:latest}
+    build: ${CONTAINER_BUILD:false}
+    push: ${CONTAINER_PUSH:false}
+
+  # ============================================
+  # Kubernetes Configuration
+  # ============================================
+  kubernetes:
+    deployment-target: ${K8S_DEPLOYMENT_TARGET:kubernetes}
+    namespace: ${K8S_NAMESPACE:default}
+
+    # Service configuration
+    service-type: ${K8S_SERVICE_TYPE:ClusterIP}
+
+    # Health probes
+    liveness-probe:
+      http-action-path: /q/health/live
+      initial-delay: ${K8S_LIVENESS_INITIAL:30s}
+      period: ${K8S_LIVENESS_PERIOD:10s}
+      timeout: ${K8S_LIVENESS_TIMEOUT:3s}
+      failure-threshold: ${K8S_LIVENESS_FAILURE:3}
+
+    readiness-probe:
+      http-action-path: /q/health/ready
+      initial-delay: ${K8S_READINESS_INITIAL:10s}
+      period: ${K8S_READINESS_PERIOD:5s}
+      timeout: ${K8S_READINESS_TIMEOUT:3s}
+      failure-threshold: ${K8S_READINESS_FAILURE:3}
+
+    # Resources
+    resources:
+      requests:
+        memory: ${K8S_MEMORY_REQUEST:256Mi}
+        cpu: ${K8S_CPU_REQUEST:250m}
+      limits:
+        memory: ${K8S_MEMORY_LIMIT:512Mi}
+        cpu: ${K8S_CPU_LIMIT:1000m}
+
+    # Environment variables from ConfigMap/Secret
+    env:
+      configmaps: ${K8S_CONFIGMAP:oauth2-config}
+      secrets: ${K8S_SECRET:oauth2-secret}
+
+    # Labels
+    labels:
+      app: ${K8S_LABEL_APP:oauth2-server}
+      version: ${K8S_LABEL_VERSION:v1}
+      tier: ${K8S_LABEL_TIER:backend}
+
+# ============================================
+# MicroProfile JWT Configuration
+# ============================================
+mp:
+  jwt:
+    verify:
+      issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
+      audiences: ${JWT_AUDIENCE:default-client-id}
+      publickey:
+        location: ${JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}
 
 # ============================================
 # OAuth2 Custom Configuration
 # ============================================
-
 oauth2:
   # JWT Configuration
   jwt:
-    issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
-    access-token-expiry: "${OAUTH2_JWT_ACCESS_TOKEN_EXPIRY:3600}"
-    refresh-token-expiry: "${OAUTH2_JWT_REFRESH_TOKEN_EXPIRY:86400}"
+    issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
+    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
+    refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:86400}
 
   # Authorization Code Configuration
   authorization-code:
-    validity: 300
+    validity: ${OAUTH2_AUTH_CODE_VALIDITY:300}
 
-  # Rate Limiting
+  # Rate Limiting Configuration
   rate-limit:
+    # Login rate limit
     login:
-      max-attempts: "${OAUTH2_RATE_LIMIT_LOGIN_MAX_ATTEMPTS:5}"
-      window-seconds: 900
+      max-attempts: ${OAUTH2_LOGIN_MAX_ATTEMPTS:5}
+      window-seconds: ${OAUTH2_LOGIN_WINDOW:900}
+    # Token rate limit
     token:
-      max-requests: 100
-      window-seconds: 3600
+      max-requests: ${OAUTH2_TOKEN_MAX_REQUESTS:100}
+      window-seconds: ${OAUTH2_TOKEN_WINDOW:3600}
 
-  # Account Security (Giữ nguyên)
+  # Account Security Configuration
   security:
-    max-failed-login-attempts: 5
-    account-lock-duration: 900
-    password-min-length: 8
+    max-failed-login-attempts: ${OAUTH2_MAX_FAILED_LOGIN:5}
+    account-lock-duration: ${OAUTH2_ACCOUNT_LOCK_DURATION:900}
+    password-min-length: ${OAUTH2_PASSWORD_MIN_LENGTH:8}
+    password-require-uppercase: ${OAUTH2_PASSWORD_UPPERCASE:true}
+    password-require-lowercase: ${OAUTH2_PASSWORD_LOWERCASE:true}
+    password-require-digit: ${OAUTH2_PASSWORD_DIGIT:true}
+    password-require-special: ${OAUTH2_PASSWORD_SPECIAL:true}
 
-  # Features (Giữ nguyên)
+  # Feature Flags
   features:
-    mfa-enabled: true
-    pkce-required: true
+    mfa-enabled: ${OAUTH2_MFA_ENABLED:true}
+    pkce-required: ${OAUTH2_PKCE_REQUIRED:true}
+    refresh-token-rotation: ${OAUTH2_REFRESH_ROTATION:true}
+    device-tracking: ${OAUTH2_DEVICE_TRACKING:true}
+
+  # Session Configuration
   session:
-    ttl: 3600 # 1 hour
+    ttl: ${OAUTH2_SESSION_TTL:3600}
+    max-concurrent: ${OAUTH2_SESSION_MAX_CONCURRENT:5}
+    remember-me-duration: ${OAUTH2_REMEMBER_ME:604800}
+
+  # MFA Configuration
   mfa:
-    time-step: 30 # seconds
-    code-length: 6
-    session-validity: 300 # 5 minutes
-mp:
-  jwt:
-    verify:
-      issuer: "${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}"
-      audiences: default-client-id
-      publickey:
-        location: "${SMALLRYE_JWT_PATH_PUBLIC_KEY:/keys/publicKey.pem}"
+    time-step: ${OAUTH2_MFA_TIME_STEP:30}
+    code-length: ${OAUTH2_MFA_CODE_LENGTH:6}
+    session-validity: ${OAUTH2_MFA_SESSION_VALIDITY:300}
+    issuer: ${OAUTH2_MFA_ISSUER:OAuth2Server}
+    backup-codes-count: ${OAUTH2_MFA_BACKUP_CODES:10}
+
+  # Email Configuration (for notifications)
+  email:
+    enabled: ${OAUTH2_EMAIL_ENABLED:false}
+    from: ${OAUTH2_EMAIL_FROM:noreply@jaxtony.store}
+    smtp-host: ${OAUTH2_EMAIL_SMTP_HOST:smtp.gmail.com}
+    smtp-port: ${OAUTH2_EMAIL_SMTP_PORT:587}
+    smtp-username: ${OAUTH2_EMAIL_SMTP_USER:}
+    smtp-password: ${OAUTH2_EMAIL_SMTP_PASS:}
+    smtp-tls: ${OAUTH2_EMAIL_SMTP_TLS:true}
+
+# ============================================
+# Profile-specific Configuration
+# ============================================
+"%dev":
+  quarkus:
+    log:
+      level: DEBUG
+      category:
+        "com.htv.oauth2": DEBUG
+    hibernate-orm:
+      log:
+        sql: true
+        bind-parameters: true
+    http:
+      cors:
+        origins: "*"
+
+"%test":
+  quarkus:
+    log:
+      level: INFO
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/oauth2db_test
+    flyway:
+      clean-at-start: true
+
+"%prod":
+  quarkus:
+    log:
+      level: INFO
+      console:
+        json: true
+      category:
+        "com.htv.oauth2": INFO
+    http:
+      port: 8080
+      host: 0.0.0.0
