@@ -41,7 +41,7 @@ quarkus:
     # CORS Configuration
     cors:
       ~: true
-      origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8080}
+      origins: ${CORS_ORIGINS:*}
       methods: ${CORS_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
       headers: ${CORS_HEADERS:accept,authorization,content-type,x-requested-with,x-api-key}
       exposed-headers: ${CORS_EXPOSED_HEADERS:Content-Disposition,X-Total-Count}
@@ -127,7 +127,8 @@ quarkus:
     level: ${LOG_LEVEL:INFO}
     console:
       enable: ${LOG_CONSOLE_ENABLE:true}
-      format: ${LOG_FORMAT:%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{2.}] (%t) %s%e%n}
+      format: >-
+        %d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{3.}] (%t) %s%e%n
       json: ${LOG_JSON:false}
 
     # Category levels
