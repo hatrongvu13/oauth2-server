@@ -1,5 +1,6 @@
 package com.htv.oauth2.service.user;
 
+import com.htv.oauth2.domain.MfaConfig;
 import com.htv.oauth2.domain.User;
 import com.htv.oauth2.dto.request.EnableMfaRequest;
 import com.htv.oauth2.dto.request.RegisterRequest;
@@ -16,7 +17,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -37,13 +37,14 @@ public class UserService {
     @Inject
     MfaService mfaService;
 
-    private static final String MFA_ISSUER_NAME = "HTV";
-
     /**
      * Register new user
+     * - Tạo user bình thường
+     * - Tạo MfaConfig riêng biệt (chưa enable)
+     * - Trả về QR code + secret để setup MFA ngay sau đăng ký (tùy chọn)
      */
     @Transactional
-    public RegisterResponse registerUser(RegisterRequest request) throws UnsupportedEncodingException {
+    public RegisterResponse registerUser(RegisterRequest request) {
         log.info("Registering new user: {}", request.getUsername());
 
         // Validate passwords match
@@ -51,48 +52,38 @@ public class UserService {
             throw new PasswordMismatchException();
         }
 
-        // Check if username exists
+        // Check duplicates
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UsernameAlreadyExistsException(request.getUsername());
         }
-
-        // Check if email exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException(request.getEmail());
         }
 
-        // 1 Create user entity
+        // Create and persist user
         User user = userMapper.fromRegisterRequest(request);
         user.setPassword(passwordService.hashPassword(request.getPassword()));
-        user.setRoles(Set.of("USER")); // Default role
-        user.setMfaEnabled(false);
-        user.setEmailVerified(true); // giả lập đã xác thực email
-
-        // 2. TẠO VÀ LƯU SECRET KEY TẠM THỜI CHO MFA SETUP
-        String secretKey = mfaService.generateMfaSecret();
-        user.setMfaSecret(secretKey);
-
+        user.setRoles(Set.of("USER"));
+        user.setMfaEnabled(false);           // Sẽ cập nhật khi verify MFA thành công
+        user.setEmailVerified(true);         // Giả lập đã verify email
         userRepository.persist(user);
 
-        // 3. Chuẩn bị dữ liệu phản hồi MFA
-        String qrCodeUrl = mfaService.generateQrCodeUrl(
-                user.getEmail(),
-                secretKey,
-                MFA_ISSUER_NAME
-        );
-        String qrCodeBase64 = mfaService.generateQrCodeBase64(qrCodeUrl);
+
+        MfaConfig mfaConfig = mfaService.generateMfaSecret(user.getId(), request.getUsername(), request.getEmail());
+
+        String qrCodeBase64 = mfaService.generateQrCode(request.getEmail(), mfaConfig.getSecretKey());
 
         log.info("User registered successfully: {}", user.getId());
-        // 4. Trả về RegisterResponse
+
         return RegisterResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .createdAt(user.getCreatedAt())
-                .message("User registered successfully. MFA setup is required.")
-                .mfaRequiredSetup(true)
-                .mfaSecretKey(secretKey)
-                .mfaQrCodeUrl("data:image/png;base64," + qrCodeBase64)
+                .message("User registered successfully. Please set up MFA for enhanced security.")
+                .mfaRequiredSetup(true)                  // Frontend có thể quyết định bắt buộc hay không
+                .mfaSecretKey(mfaConfig.getSecretKey())
+                .mfaQrCodeUrl(qrCodeBase64)               // Đã có prefix data:image/png;base64,
                 .build();
     }
 
@@ -106,26 +97,52 @@ public class UserService {
     }
 
     /**
-     * ENABLE MFA for the user (after verification)
+     * ENABLE MFA for the user after verifying the first TOTP code
      */
     @Transactional
     public void enableMfa(String userId, EnableMfaRequest request) {
-        // Chỉ cần cập nhật trạng thái kích hoạt, vì Secret Key đã được lưu trước đó
-        User user = userRepository.findByIdOptional(userId).orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+        User user = userRepository.findByIdOptional(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
-        String secretKey = user.getMfaSecret();
-
-        if (secretKey == null || user.getMfaEnabled()) {
-            throw new InvalidOperationException("MFA setup process not started or already enabled.");
+        if (user.getMfaEnabled()) {
+            throw new InvalidOperationException("MFA is already enabled for this user.");
         }
 
-        // 1. Xác minh mã MFA (sử dụng secret key TẠM THỜI)
-        if (!mfaService.verifyMfaCode(user, request.getVerificationCode())) {
-            throw new InvalidMfaCodeException("MFA code is invalid.");
+        // Verify code và tự động enable trong MfaService
+        boolean verified = mfaService.verifyAndEnableMfa(userId, Integer.parseInt(request.getVerificationCode()));
+
+        if (!verified) {
+            throw new InvalidMfaCodeException("Invalid MFA verification code.");
         }
+
+        // Cập nhật flag trong User entity (để dễ query trong login flow)
         user.setMfaEnabled(true);
         userRepository.persist(user);
-        log.info("MFA successfully enabled for user {}", user.getId());
+
+        log.info("MFA successfully enabled for user {}", userId);
+    }
+
+    /**
+     * DISABLE MFA for the user
+     * - Xóa cấu hình MFA trong database
+     * - Cập nhật trạng thái mfaEnabled của User entity về false
+     */
+    @Transactional
+    public void disableMfa(String userId) {
+        log.info("Disabling MFA for user: {}", userId);
+
+        // 1. Tìm user để đảm bảo user tồn tại
+        User user = userRepository.findByIdOptional(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        // 2. Xóa cấu hình MFA (Secret key, Backup codes) thông qua MfaService
+        mfaService.disableMfa(userId);
+
+        // 3. Cập nhật flag mfaEnabled trong bảng User
+        user.setMfaEnabled(false);
+        userRepository.persist(user);
+
+        log.info("MFA has been successfully disabled for user {}", userId);
     }
 
     /**
@@ -143,14 +160,12 @@ public class UserService {
     @Transactional
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         log.info("Updating user: {}", userId);
-
         User user = userRepository.findByIdOptional(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        // Check if email is being changed and already exists
-        if (request.getEmail() != null &&
-                !request.getEmail().equals(user.getEmail()) &&
-                userRepository.existsByEmail(request.getEmail())) {
+        // Check email conflict
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())
+                && userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException(request.getEmail());
         }
 
@@ -162,7 +177,7 @@ public class UserService {
     }
 
     /**
-     * Enable/disable user
+     * Enable/disable user account
      */
     @Transactional
     public void setUserEnabled(String userId, boolean enabled) {
@@ -174,13 +189,17 @@ public class UserService {
     }
 
     /**
-     * Delete user
+     * Delete user (cũng nên xóa MfaConfig nếu có)
      */
     @Transactional
     public void deleteUser(String userId) {
-        if (!userRepository.deleteById(userId)) {
-            throw new UserNotFoundException(userId);
-        }
+        User user = userRepository.findByIdOptional(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        // Xóa MFA config liên quan
+        mfaService.disableMfa(userId);
+
+        userRepository.delete(user);
         log.info("User deleted: {}", userId);
     }
 
@@ -199,7 +218,7 @@ public class UserService {
     public void addRole(String userId, String role) {
         User user = userRepository.findByIdOptional(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        user.getRoles().add(role);
+        user.getRoles().add(role.toUpperCase());
         userRepository.persist(user);
         log.info("Role {} added to user {}", role, userId);
     }
@@ -211,25 +230,23 @@ public class UserService {
     public void removeRole(String userId, String role) {
         User user = userRepository.findByIdOptional(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        user.getRoles().remove(role);
+        user.getRoles().remove(role.toUpperCase());
         userRepository.persist(user);
         log.info("Role {} removed from user {}", role, userId);
     }
 
     /**
-     * Handle failed login attempt
+     * Handle failed login attempt (brute-force protection)
      */
     @Transactional
     public void handleFailedLogin(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
             user.incrementFailedLoginAttempts();
 
-            // Lock account after 5 failed attempts
             if (user.getFailedLoginAttempts() >= 5) {
-                user.setAccountLockedUntil(Instant.now().plusSeconds(900)); // 15 minutes
+                user.setAccountLockedUntil(Instant.now().plusSeconds(900)); // 15 minutes lock
                 log.warn("Account locked due to failed login attempts: {}", username);
             }
-
             userRepository.persist(user);
         });
     }
@@ -244,5 +261,12 @@ public class UserService {
         user.resetFailedLoginAttempts();
         user.setLastLogin(Instant.now());
         userRepository.persist(user);
+    }
+
+    /**
+     * Check if MFA is enabled for a user (dùng trong login flow)
+     */
+    public boolean isMfaEnabled(String userId) {
+        return mfaService.isMfaEnabled(userId);
     }
 }

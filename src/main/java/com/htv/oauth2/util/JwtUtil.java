@@ -12,7 +12,7 @@ import java.util.Set;
 @ApplicationScoped
 public class JwtUtil {
 
-    @ConfigProperty(name = "oauth2.jwt.issuer")
+    @ConfigProperty(name = "quarkus.smallrye-jwt.issuer")
     String issuer;
 
     @ConfigProperty(name = "oauth2.jwt.access-token-expiry", defaultValue = "3600")

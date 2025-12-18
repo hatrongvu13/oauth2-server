@@ -241,6 +241,42 @@ public class AuthResource {
         }
     }
 
+    /**
+     * Disable MFA for the current authenticated user
+     * POST /api/auth/mfa/disable
+     */
+    @POST
+    @Path("/mfa/disable")
+    @Authenticated
+    public Response disableMfa() {
+        try {
+            // 1. Lấy userId từ JWT Subject
+            String userId = jwt.getSubject();
+
+            if (userId == null) {
+                return Response.status(Response.Status.UNAUTHORIZED).build();
+            }
+
+            log.info("Request to disable MFA for user: {}", userId);
+
+            // 2. Gọi MfaService để xóa cấu hình MFA (Secret key, backup codes)
+            mfaService.disableMfa(userId);
+
+            // 3. Cập nhật trạng thái mfaEnabled = false trong bảng User thông qua UserService
+            userService.disableMfa(userId);
+
+            log.info("MFA successfully disabled for user {}", userId);
+            return Response.ok(SuccessResponse.of("MFA has been successfully disabled.")).build();
+
+        } catch (ResourceNotFoundException e) {
+            return buildErrorResponse(e, Response.Status.NOT_FOUND);
+        } catch (OAuth2Exception e) {
+            return buildErrorResponse(e, Response.Status.BAD_REQUEST);
+        } catch (Exception e) {
+            return buildInternalServerError(e);
+        }
+    }
+
     private Client createDefaultClient() {
         Client client = new Client();
         client.setClientId("default-client-id");

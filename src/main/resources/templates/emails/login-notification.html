@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .alert { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>New Login Detected</h2>
+    <div class="alert">
+        <p>Hi {username},</p>
+        <p>We detected a new login to your account:</p>
+        <ul>
+            <li><strong>Time:</strong> {timestamp}</li>
+            <li><strong>IP Address:</strong> {ipAddress}</li>
+            <li><strong>Device:</strong> {userAgent}</li>
+        </ul>
+        <p>If this wasn't you, please reset your password immediately.</p>
+    </div>
+</div>
+</body>
+</html>

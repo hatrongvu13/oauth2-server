@@ -155,23 +155,9 @@ quarkus:
   # ============================================
   smallrye-jwt:
     enabled: true
-
-    # Sign configuration (for token generation)
-    path:
-      private-key: ${JWT_SIGN_KEY_LOCATION:classpath:keys/private_key.pem}
-
-    # Verify configuration (for token validation)
-#    verify:
-#      key:
-#        location: ${JWT_VERIFY_KEY_LOCATION:classpath:keys/public_key.pem}
-
-    # Issuer (must match oauth2.jwt.issuer)
     issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
-
-    # Token configuration
     new-token:
       signature-algorithm: ${JWT_ALGORITHM:RS256}
-      issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
       audience: ${JWT_AUDIENCE:default-client-id}
       lifespan: ${JWT_LIFESPAN:3600}
 
@@ -279,6 +265,17 @@ quarkus:
       app: ${K8S_LABEL_APP:oauth2-server}
       version: ${K8S_LABEL_VERSION:v1}
       tier: ${K8S_LABEL_TIER:backend}
+  mailer:
+    from: ${MAIL_FROM:hatrongvu13@gmail.com}
+    host: smtp.gmail.com
+    port: 587
+    start-tls: REQUIRED
+    username: ${SMTP_USERNAME:hatrongvu13@gmail.com}
+    password: ${SMTP_PASSWORD:your-app-password}
+    mock: false
+  # Template location
+  qute:
+    template-path-exclude: META-INF/resources/.*$
 
 # ============================================
 # MicroProfile JWT Configuration
@@ -288,8 +285,8 @@ mp:
     verify:
       issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
       audiences: ${JWT_AUDIENCE:default-client-id}
-#      publickey:
-#        location: ${JWT_VERIFY_KEY_LOCATION:keys/public_key.pem}
+      publickey:
+        location: ${JWT_VERIFY_KEY_LOCATION:classpath:keys/public_key.pem}
 
 # ============================================
 # OAuth2 Custom Configuration
@@ -297,7 +294,6 @@ mp:
 oauth2:
   # JWT Configuration
   jwt:
-    issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
     access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
     refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:86400}
 
@@ -307,56 +303,28 @@ oauth2:
 
   # Rate Limiting Configuration
   rate-limit:
-    # Login rate limit
+    enabled: true
+    # Login attempts
     login:
-      max-attempts: ${OAUTH2_LOGIN_MAX_ATTEMPTS:5}
-      window-seconds: ${OAUTH2_LOGIN_WINDOW:900}
-    # Token rate limit
-    token:
-      max-requests: ${OAUTH2_TOKEN_MAX_REQUESTS:100}
-      window-seconds: ${OAUTH2_TOKEN_WINDOW:3600}
+      capacity: 5          # Max 5 attempts
+      refill-tokens: 5     # Refill 5 tokens
+      refill-period: 300   # Every 5 minutes (300s)
+    # MFA verification
+    mfa:
+      capacity: 3          # Max 3 attempts
+      refill-tokens: 3
+      refill-period: 60    # Every 1 minute
+    # Email sending
+    email:
+      capacity: 10         # Max 10 emails
+      refill-tokens: 10
+      refill-period: 3600  # Per hour
 
-  # Account Security Configuration
-  security:
-    max-failed-login-attempts: ${OAUTH2_MAX_FAILED_LOGIN:5}
-    account-lock-duration: ${OAUTH2_ACCOUNT_LOCK_DURATION:900}
-    password-min-length: ${OAUTH2_PASSWORD_MIN_LENGTH:8}
-    password-require-uppercase: ${OAUTH2_PASSWORD_UPPERCASE:true}
-    password-require-lowercase: ${OAUTH2_PASSWORD_LOWERCASE:true}
-    password-require-digit: ${OAUTH2_PASSWORD_DIGIT:true}
-    password-require-special: ${OAUTH2_PASSWORD_SPECIAL:true}
-
-  # Feature Flags
-  features:
-    mfa-enabled: ${OAUTH2_MFA_ENABLED:true}
-    pkce-required: ${OAUTH2_PKCE_REQUIRED:true}
-    refresh-token-rotation: ${OAUTH2_REFRESH_ROTATION:true}
-    device-tracking: ${OAUTH2_DEVICE_TRACKING:true}
-
-  # Session Configuration
-  session:
-    ttl: ${OAUTH2_SESSION_TTL:3600}
-    max-concurrent: ${OAUTH2_SESSION_MAX_CONCURRENT:5}
-    remember-me-duration: ${OAUTH2_REMEMBER_ME:604800}
-
-  # MFA Configuration
-  mfa:
-    time-step: ${OAUTH2_MFA_TIME_STEP:30}
-    code-length: ${OAUTH2_MFA_CODE_LENGTH:6}
-    session-validity: ${OAUTH2_MFA_SESSION_VALIDITY:300}
-    issuer: ${OAUTH2_MFA_ISSUER:OAuth2Server}
-    backup-codes-count: ${OAUTH2_MFA_BACKUP_CODES:10}
-
-  # Email Configuration (for notifications)
-  email:
-    enabled: ${OAUTH2_EMAIL_ENABLED:false}
-    from: ${OAUTH2_EMAIL_FROM:noreply@jaxtony.store}
-    smtp-host: ${OAUTH2_EMAIL_SMTP_HOST:smtp.gmail.com}
-    smtp-port: ${OAUTH2_EMAIL_SMTP_PORT:587}
-    smtp-username: ${OAUTH2_EMAIL_SMTP_USER:}
-    smtp-password: ${OAUTH2_EMAIL_SMTP_PASS:}
-    smtp-tls: ${OAUTH2_EMAIL_SMTP_TLS:true}
-
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: ${JWT_SIGN_KEY_LOCATION:classpath:keys/private_key.pem}
 # ============================================
 # Profile-specific Configuration
 # ============================================

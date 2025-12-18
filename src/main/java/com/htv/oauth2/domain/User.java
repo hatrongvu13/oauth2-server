@@ -58,9 +58,6 @@ public class User extends PanacheEntityBase {
     @Builder.Default
     private Boolean mfaEnabled = false;
 
-    @Column(name = "mfa_secret", length = 255)
-    private String mfaSecret;
-
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
@@ -76,12 +73,6 @@ public class User extends PanacheEntityBase {
 
     @Column(name = "last_login")
     private Instant lastLogin;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_mfa_backup_codes", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "backup_code")
-    @Builder.Default
-    private Set<String> mfaBackupCodes = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

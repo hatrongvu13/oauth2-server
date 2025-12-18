@@ -17,8 +17,6 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.UnsupportedEncodingException;
-
 @Slf4j
 @Path("/api/users")
 @Produces(MediaType.APPLICATION_JSON)
@@ -47,8 +45,6 @@ public class UserResource {
                     .errorDescription(e.getErrorDescription())
                     .build();
             return Response.status(e.getHttpStatus()).entity(error).build();
-        } catch (UnsupportedEncodingException e) {
-            return Response.status(500).entity(e).build();
         }
     }
 
