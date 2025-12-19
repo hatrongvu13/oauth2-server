@@ -89,7 +89,7 @@ quarkus:
     locations: classpath:db/migration
     baseline-version: 1.0.0
     baseline-description: Initial baseline
-    clean-at-start: true
+    clean-at-start: false
 
   # ============================================
   # Redis Configuration
@@ -330,9 +330,9 @@ smallrye:
 "%dev":
   quarkus:
     log:
-      level: DEBUG
+      level: WARN
       category:
-        "com.htv.oauth2": DEBUG
+        "com.htv.oauth2": WARN
     hibernate-orm:
       log:
         sql: true

@@ -166,7 +166,7 @@ public class AuthResource {
         try {
             // 1. Xác thực MFA session token và code
             User authenticatedUser = authService.verifyMfaSession(
-                    request.getMfaToken(),
+                    mfaService.getUserIdFromMfaToken(request.getMfaToken()),
                     request.getMfaCode(),
                     ipAddress,
                     userAgent

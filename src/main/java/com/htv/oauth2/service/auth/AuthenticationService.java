@@ -121,9 +121,7 @@ public class AuthenticationService {
      */
     private void handleMfaChallenge(User user, LoginRequest request, String ipAddress, String userAgent) {
         if (request.getMfaCode() == null) {
-            // Lưu ý: Đảm bảo MfaService của bạn có method generateMfaSessionToken hoặc thay đổi logic tương ứng
-            // Ở đây tôi giữ nguyên logic ném MfaRequiredException như cũ
-            throw new MfaRequiredException("MFA code required", user.getId().toString());
+            throw new MfaRequiredException("MFA code required", mfaService.generateMfaTokenExpire(user.getId()));
         }
 
         // Check Rate Limit cho MFA (Sử dụng RateLimitService mới)
@@ -135,7 +133,7 @@ public class AuthenticationService {
         }
 
         // Verify MFA code (Sử dụng method verifyMfaCodeDuringLogin của bạn)
-        if (!mfaService.verifyMfaCodeDuringLogin(user.getId().toString(), request.getMfaCode())) {
+        if (!mfaService.verifyMfaCodeDuringLogin(user.getId(), request.getMfaCode())) {
             log.warn("Invalid MFA code for user: {}", user.getId());
             auditService.logFailure(user, "MFA_FAILED", "invalid_code",
                     "Invalid MFA code", ipAddress, userAgent);
