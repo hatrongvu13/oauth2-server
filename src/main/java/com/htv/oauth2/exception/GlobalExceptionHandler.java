@@ -35,11 +35,12 @@ public class GlobalExceptionHandler {
                 .build();
 
         // Add Retry-After header for rate limiting
-        if (ex instanceof RateLimitExceededException) {
-            RateLimitExceededException rateLimitEx = (RateLimitExceededException) ex;
+        if (ex instanceof RateLimitExceededException rateLimitEx) {
             return RestResponse.ResponseBuilder
                     .create(ex.getHttpStatus(), String.valueOf(errorResponse))
                     .header("Retry-After", String.valueOf(rateLimitEx.getRetryAfter()))
+                    .header("X-RateLimit-Remaining", 0)
+                    .header("X-RateLimit-Reset", Instant.now().getEpochSecond() + rateLimitEx.getRetryAfter())
                     .build();
         }
 

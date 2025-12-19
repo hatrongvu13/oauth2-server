@@ -7,7 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID; /**
+import java.util.UUID;
+
+/**
  * Custom exception handler for REST responses
  * This can be used in specific resources if needed
  */
@@ -37,9 +39,11 @@ public class RestExceptionHandler {
         }
 
         // Add Retry-After header for rate limiting
-        if (ex instanceof RateLimitExceededException) {
-            RateLimitExceededException rateLimitEx = (RateLimitExceededException) ex;
-            builder.header("Retry-After", rateLimitEx.getRetryAfter());
+        if (ex instanceof RateLimitExceededException rateLimitEx) {
+            builder.header("Retry-After", rateLimitEx.getRetryAfter())
+                    .header("X-RateLimit-Remaining", 0)
+                    .header("X-RateLimit-Reset", Instant.now().getEpochSecond() + rateLimitEx.getRetryAfter());
+            ;
         }
 
         return builder.build();
