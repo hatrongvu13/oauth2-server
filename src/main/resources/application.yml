@@ -8,8 +8,8 @@ quarkus:
   # Application Info
   # ============================================
   application:
-    name: ${APP_NAME:oauth2-server}
-    version: ${APP_VERSION:1.0.0}
+    name: oauth2-server
+    version: 1.0.0
 
   # ============================================
   # Native Build Configuration
@@ -35,72 +35,72 @@ quarkus:
   # HTTP Server Configuration
   # ============================================
   http:
-    port: ${HTTP_PORT:8080}
-    host: ${HTTP_HOST:0.0.0.0}
+    port: 8080
+    host: 0.0.0.0
 
     # CORS Configuration
     cors:
       ~: true
-      origins: ${CORS_ORIGINS:*}
-      methods: ${CORS_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
-      headers: ${CORS_HEADERS:accept,authorization,content-type,x-requested-with,x-api-key}
-      exposed-headers: ${CORS_EXPOSED_HEADERS:Content-Disposition,X-Total-Count}
-      access-control-max-age: ${CORS_MAX_AGE:24H}
-      access-control-allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+      origins: *
+      methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+      headers: accept,authorization,content-type,x-requested-with,x-api-key
+      exposed-headers: Content-Disposition,X-Total-Count
+      access-control-max-age: 24H
+      access-control-allow-credentials: true
 
   # ============================================
   # Database Configuration (PostgreSQL)
   # ============================================
   datasource:
     db-kind: postgresql
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
+    username: root
+    password: root
 
     jdbc:
-      url: ${DB_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}
-      max-size: ${DB_POOL_MAX:16}
-      min-size: ${DB_POOL_MIN:4}
-      acquisition-timeout: ${DB_ACQUISITION_TIMEOUT:10}
-      idle-removal-interval: ${DB_IDLE_REMOVAL_INTERVAL:5M}
-      max-lifetime: ${DB_MAX_LIFETIME:30M}
-      leak-detection-interval: ${DB_LEAK_DETECTION:5M}
+      url: jdbc:postgresql://localhost:5432/oauth2db
+      max-size: 16
+      min-size: 4
+      acquisition-timeout: 10
+      idle-removal-interval: 5M
+      max-lifetime: 30M
+      leak-detection-interval: 5M
       validation-query-sql: SELECT 1
-      enable-metrics: ${DB_ENABLE_METRICS:true}
+      enable-metrics: true
 
   # ============================================
   # Hibernate ORM Configuration
   # ============================================
   hibernate-orm:
     database:
-      generation: ${DB_GENERATION:none}
+      generation: none
     log:
-      sql: ${HIBERNATE_LOG_SQL:false}
-      bind-parameters: ${HIBERNATE_LOG_PARAMS:false}
-      format-sql: ${HIBERNATE_FORMAT_SQL:false}
+      sql: false
+      bind-parameters: false
+      format-sql: false
     jdbc:
-      statement-batch-size: ${HIBERNATE_BATCH_SIZE:20}
+      statement-batch-size: 20
 
   # ============================================
   # Flyway Migration
   # ============================================
   flyway:
-    migrate-at-start: ${FLYWAY_MIGRATE:true}
-    baseline-on-migrate: ${FLYWAY_BASELINE:true}
-    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
-    baseline-version: ${FLYWAY_BASELINE_VERSION:1.0.0}
-    baseline-description: ${FLYWAY_BASELINE_DESC:Initial baseline}
-    clean-at-start: ${FLYWAY_CLEAN:false}
+    migrate-at-start: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    baseline-version: 1.0.0
+    baseline-description: Initial baseline
+    clean-at-start: false
 
   # ============================================
   # Redis Configuration
   # ============================================
   redis:
-    hosts: ${REDIS_HOSTS:redis://localhost:6379}
-    password: ${REDIS_PASSWORD:}
-    database: ${REDIS_DATABASE:0}
-    timeout: ${REDIS_TIMEOUT:10s}
-    max-pool-size: ${REDIS_POOL_MAX:20}
-    max-pool-waiting: ${REDIS_POOL_WAITING:24}
+    hosts: redis://localhost:6379
+    password: 
+    database: 0
+    timeout: 10s
+    max-pool-size: 20
+    max-pool-waiting: 24
 
   # ============================================
   # Cache Configuration (Caffeine)
@@ -108,38 +108,36 @@ quarkus:
   cache:
     caffeine:
       "user-cache":
-        initial-capacity: ${CACHE_USER_INITIAL:100}
-        maximum-size: ${CACHE_USER_MAX:1000}
-        expire-after-write: ${CACHE_USER_EXPIRE:10M}
+        initial-capacity: 100
+        maximum-size: 1000
+        expire-after-write: 10M
       "client-cache":
-        initial-capacity: ${CACHE_CLIENT_INITIAL:50}
-        maximum-size: ${CACHE_CLIENT_MAX:500}
-        expire-after-write: ${CACHE_CLIENT_EXPIRE:30M}
+        initial-capacity: 50
+        maximum-size: 500
+        expire-after-write: 30M
       "token-cache":
-        initial-capacity: ${CACHE_TOKEN_INITIAL:200}
-        maximum-size: ${CACHE_TOKEN_MAX:2000}
-        expire-after-write: ${CACHE_TOKEN_EXPIRE:5M}
+        initial-capacity: 200
+        maximum-size: 2000
+        expire-after-write: 5M
 
   # ============================================
   # Logging Configuration
   # ============================================
   log:
-    level: ${LOG_LEVEL:INFO}
+    level: INFO
     console:
-      enable: ${LOG_CONSOLE_ENABLE:true}
       format: >-
-        %d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{3.}] (%t) %s%e%n
-      json: ${LOG_JSON:false}
+        %d{yyyy-MM-dd HH:mm:ss,SSS %-5p [%c{3.] (%t) %s%e%n
 
     # Category levels
     category:
-      "com.htv.oauth2": ${LOG_APP_LEVEL:WARN}
-      "org.hibernate.SQL": ${LOG_HIBERNATE_SQL:WARN}
-      "org.hibernate.type.descriptor.sql.BasicBinder": ${LOG_HIBERNATE_BINDER:WARN}
-      "io.quarkus": ${LOG_QUARKUS:INFO}
-      "io.vertx": ${LOG_VERTX:WARN}
-      "org.jboss": ${LOG_JBOSS:WARN}
-      "org.flywaydb": ${LOG_FLYWAY:INFO}
+      "com.htv.oauth2": WARN
+      "org.hibernate.SQL": WARN
+      "org.hibernate.type.descriptor.sql.BasicBinder": WARN
+      "io.quarkus": INFO
+      "io.vertx": WARN
+      "org.jboss": WARN
+      "org.flywaydb": INFO
       "io.quarkus.bootstrap.classloading": INFO
 
   # ============================================
@@ -155,123 +153,122 @@ quarkus:
   # ============================================
   smallrye-jwt:
     enabled: true
-    issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
+    issuer: ${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}
     new-token:
-      signature-algorithm: ${JWT_ALGORITHM:RS256}
-      audience: ${JWT_AUDIENCE:default-client-id}
-      lifespan: ${JWT_LIFESPAN:3600}
+      signature-algorithm: RS256
+      audience: default-client-id
+      lifespan: 3600
 
   # ============================================
   # OpenAPI/Swagger Configuration
   # ============================================
   smallrye-openapi:
-    path: ${OPENAPI_PATH:/openapi}
-    info-title: ${OPENAPI_TITLE:OAuth2 Authorization Server API}
-    info-version: ${OPENAPI_VERSION:1.0.0}
-    info-description: ${OPENAPI_DESC:Production-ready OAuth2 Authorization Server with MFA support}
-    info-contact-email: ${OPENAPI_CONTACT:hatrongvu13@gmail.com}
-    info-contact-name: ${OPENAPI_CONTACT_NAME:OAuth2 Team}
-    servers: ${OPENAPI_SERVERS:https://oauth2.jaxtony.store}
+    path: /openapi
+    info-title: OAuth2 Authorization Server API
+    info-version: 1.0.0
+    info-description: Production-ready OAuth2 Authorization Server with MFA support
+    info-contact-email: hatrongvu13@gmail.com
+    info-contact-name: OAuth2 Team
+    servers: https://oauth2.jaxtony.store
 
   swagger-ui:
-    always-include: ${SWAGGER_ENABLED:true}
-    path: ${SWAGGER_PATH:/swagger-ui}
-    oauth2-redirect-url: ${SWAGGER_OAUTH2_REDIRECT:/swagger-ui/oauth2-redirect.html}
+    always-include: true
+    path: /swagger-ui
+    oauth2-redirect-url: /swagger-ui/oauth2-redirect.html
 
   # ============================================
   # Health Check Configuration
   # ============================================
   smallrye-health:
     ui:
-      enable: ${HEALTH_UI_ENABLED:true}
-      root-path: ${HEALTH_UI_PATH:/q/health-ui}
-    liveness-path: ${HEALTH_LIVENESS_PATH:/q/health/live}
-    readiness-path: ${HEALTH_READINESS_PATH:/q/health/ready}
+      enable: true
+      root-path: /q/health-ui
+    liveness-path: /q/health/live
+    readiness-path: /q/health/ready
 
   # ============================================
   # Metrics Configuration (Prometheus)
   # ============================================
   micrometer:
-    enabled: ${METRICS_ENABLED:true}
+    enabled: true
     binder:
-      jvm: ${METRICS_JVM:true}
-      system: ${METRICS_SYSTEM:true}
-      http-server: ${METRICS_HTTP:true}
+      jvm: true
+      system: true
+      http-server: true
     export:
       prometheus:
-        enabled: ${METRICS_PROMETHEUS:true}
-        path: ${METRICS_PATH:/q/metrics}
-        default-registry: ${METRICS_DEFAULT_REGISTRY:true}
+        enabled: true
+        path: /q/metrics
+        default-registry: true
 
   # ============================================
   # Scheduler Configuration
   # ============================================
   scheduler:
-    enabled: ${SCHEDULER_ENABLED:true}
-    start-mode: ${SCHEDULER_START_MODE:normal}
+    enabled: true
+    start-mode: normal
 
   # ============================================
   # Container Image Configuration (for K8s)
   # ============================================
   container-image:
-    registry: ${CONTAINER_REGISTRY:docker.io}
-    group: ${CONTAINER_GROUP:jaxtony}
-    name: ${CONTAINER_NAME:oauth2-server}
-    tag: ${CONTAINER_TAG:latest}
-    build: ${CONTAINER_BUILD:false}
-    push: ${CONTAINER_PUSH:false}
+    registry: docker.io
+    group: jaxtony
+    name: oauth2-server
+    tag: latest
+    build: false
+    push: false
 
   # ============================================
   # Kubernetes Configuration
   # ============================================
   kubernetes:
-    deployment-target: ${K8S_DEPLOYMENT_TARGET:kubernetes}
-    namespace: ${K8S_NAMESPACE:default}
+    deployment-target: kubernetes
+    namespace: default
 
     # Service configuration
-    service-type: ${K8S_SERVICE_TYPE:ClusterIP}
+    service-type: ClusterIP
 
     # Health probes
     liveness-probe:
       http-action-path: /q/health/live
-      initial-delay: ${K8S_LIVENESS_INITIAL:30s}
-      period: ${K8S_LIVENESS_PERIOD:10s}
-      timeout: ${K8S_LIVENESS_TIMEOUT:3s}
-      failure-threshold: ${K8S_LIVENESS_FAILURE:3}
+      initial-delay: 30s
+      period: 10s
+      timeout: 3s
+      failure-threshold: 3
 
     readiness-probe:
       http-action-path: /q/health/ready
-      initial-delay: ${K8S_READINESS_INITIAL:10s}
-      period: ${K8S_READINESS_PERIOD:5s}
-      timeout: ${K8S_READINESS_TIMEOUT:3s}
-      failure-threshold: ${K8S_READINESS_FAILURE:3}
+      initial-delay: 10s
+      period: 5s
+      timeout: 3s
+      failure-threshold: 3
 
     # Resources
     resources:
       requests:
-        memory: ${K8S_MEMORY_REQUEST:256Mi}
-        cpu: ${K8S_CPU_REQUEST:250m}
+        memory: 256Mi
+        cpu: 250m
       limits:
-        memory: ${K8S_MEMORY_LIMIT:512Mi}
-        cpu: ${K8S_CPU_LIMIT:1000m}
+        memory: 512Mi
+        cpu: 1000m
 
     # Environment variables from ConfigMap/Secret
     env:
-      configmaps: ${K8S_CONFIGMAP:oauth2-config}
-      secrets: ${K8S_SECRET:oauth2-secret}
+      configmaps: oauth2-config
+      secrets: oauth2-secret
 
     # Labels
     labels:
-      app: ${K8S_LABEL_APP:oauth2-server}
-      version: ${K8S_LABEL_VERSION:v1}
-      tier: ${K8S_LABEL_TIER:backend}
+      app: oauth2-server
+      version: v1
+      tier: backend
   mailer:
-    from: ${MAIL_FROM:hatrongvu13@gmail.com}
+    from: hatrongvu13@gmail.com
     host: smtp.gmail.com
     port: 587
-    start-tls: REQUIRED
-    username: ${SMTP_USERNAME:hatrongvu13@gmail.com}
-    password: ${SMTP_PASSWORD:your-app-password}
+    username: hatrongvu13@gmail.com
+    password: your-app-password
     mock: false
   # Template location
   qute:
@@ -283,10 +280,10 @@ quarkus:
 mp:
   jwt:
     verify:
-      issuer: ${JWT_ISSUER:https://oauth2.jaxtony.store}
-      audiences: ${JWT_AUDIENCE:default-client-id}
+      issuer: ${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}
+      audiences: default-client-id
       publickey:
-        location: ${JWT_VERIFY_KEY_LOCATION:classpath:keys/public_key.pem}
+        location: classpath:keys/public_key.pem
 
 # ============================================
 # OAuth2 Custom Configuration
@@ -294,12 +291,12 @@ mp:
 oauth2:
   # JWT Configuration
   jwt:
-    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
-    refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:86400}
+    access-token-expiry: 3600
+    refresh-token-expiry: 86400
 
   # Authorization Code Configuration
   authorization-code:
-    validity: ${OAUTH2_AUTH_CODE_VALIDITY:300}
+    validity: 300
 
   # Rate Limiting Configuration
   rate-limit:
@@ -324,7 +321,7 @@ smallrye:
   jwt:
     sign:
       key:
-        location: ${JWT_SIGN_KEY_LOCATION:classpath:keys/private_key.pem}
+        location: classpath:keys/private_key.pem
 # ============================================
 # Profile-specific Configuration
 # ============================================
