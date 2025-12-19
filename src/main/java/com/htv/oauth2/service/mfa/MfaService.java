@@ -47,7 +47,6 @@ public class MfaService {
 
     private static final int MFA_TIME_STEP = 30; // seconds
     private static final int BACKUP_CODE_COUNT = 10;
-    private static final int BACKUP_CODE_LENGTH = 8;
 
     /**
      * Generate MFA secret for user (setup flow)
@@ -94,6 +93,24 @@ public class MfaService {
             MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
             byte[] pngData = pngOutputStream.toByteArray();
             return "data:image/png;base64," + Base64.getEncoder().encodeToString(pngData);
+        } catch (WriterException | IOException e) {
+            log.error("Failed to generate QR code", e);
+            throw new RuntimeException("QR code generation failed", e);
+        }
+    }
+
+    /**
+     * Generate QR code as byte[]
+     */
+    public byte[] generateQrCodeImage(String username, String secretKey) {
+        String otpAuthUrl = GoogleAuthenticatorQRGenerator.getOtpAuthTotpURL(issuer, username, new GoogleAuthenticatorKey.Builder(secretKey).build());
+
+        try {
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = qrCodeWriter.encode(otpAuthUrl, BarcodeFormat.QR_CODE, 300, 300);
+            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+            return pngOutputStream.toByteArray();
         } catch (WriterException | IOException e) {
             log.error("Failed to generate QR code", e);
             throw new RuntimeException("QR code generation failed", e);
@@ -221,10 +238,16 @@ public class MfaService {
     }
 
     private String generateSingleBackupCode() {
-        byte[] bytes = new byte[5]; // 40 bits → sau filter đủ 8 ký tự
-        secureRandom.nextBytes(bytes);
-        return Base64.getEncoder().encodeToString(bytes)
-                .replaceAll("[^A-Z0-9]", "")
-                .substring(0, BACKUP_CODE_LENGTH);
+        // Generate random 8-character code
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder code = new StringBuilder();
+
+        for (int i = 0; i < 8; i++) {
+            int index = secureRandom.nextInt(chars.length());
+            code.append(chars.charAt(index));
+        }
+
+        // Format as XXXX-XXXX for readability
+        return code.substring(0, 4) + "-" + code.substring(4, 8);
     }
 }

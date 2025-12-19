@@ -10,6 +10,7 @@ import com.htv.oauth2.dto.response.UserResponse;
 import com.htv.oauth2.exception.*;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.repository.UserRepository;
+import com.htv.oauth2.service.email.EmailService;
 import com.htv.oauth2.service.mfa.MfaService;
 import com.htv.oauth2.service.security.PasswordService;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -36,6 +37,9 @@ public class UserService {
 
     @Inject
     MfaService mfaService;
+
+    @Inject
+    EmailService emailService;
 
     /**
      * Register new user
@@ -72,6 +76,9 @@ public class UserService {
         MfaConfig mfaConfig = mfaService.generateMfaSecret(user.getId(), request.getUsername(), request.getEmail());
 
         String qrCodeBase64 = mfaService.generateQrCode(request.getEmail(), mfaConfig.getSecretKey());
+        log.info("Start send email enable Mfa : {}", qrCodeBase64);
+        byte[] qrCodeBytes = mfaService.generateQrCodeImage(request.getEmail(), mfaConfig.getSecretKey());
+        emailService.sendMfaSetupEmail(user.getEmail(), user.getUsername(), qrCodeBytes, mfaConfig.getSecretKey());
 
         log.info("User registered successfully: {}", user.getId());
 

@@ -8,6 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -29,18 +30,26 @@ public class EmailService {
     @Location("emails/password-reset")
     Template passwordResetTemplate;
 
+    @Inject
+    @Location("emails/backup-codes")
+    Template backupCodesTemplate;
+
     /**
      * Send MFA setup email with QR code
      */
-    public void sendMfaSetupEmail(String to, String username, String qrCodeBase64, String secretKey) {
+    public void sendMfaSetupEmail(String to, String username, byte[] qrCodeBytes, String secretKey) {
         try {
             String html = mfaSetupTemplate
                     .data("username", username)
-                    .data("qrCode", qrCodeBase64)
                     .data("secretKey", secretKey)
                     .render();
+            Mail mail = Mail.withHtml(to, "Setup Two-Factor Authentication", html)
+                    .addInlineAttachment("qrcode.png",
+                            qrCodeBytes,
+                            "<image/png>",
+                            "<qrcode>"); // Đây là CID: qrcode
 
-            mailer.send(Mail.withHtml(to, "Setup Two-Factor Authentication", html));
+            mailer.send(mail);
             log.info("MFA setup email sent to: {}", to);
 
         } catch (Exception e) {
@@ -74,14 +83,14 @@ public class EmailService {
      */
     public void sendPasswordResetEmail(String to, String username, String resetToken) {
         try {
-            String resetUrl = "http://localhost:8080/reset-password?token=" + resetToken;
+            String resetUrl = "https://oauth2.htv.com/reset-password?token=" + resetToken;
 
             String html = passwordResetTemplate
                     .data("username", username)
                     .data("resetUrl", resetUrl)
                     .render();
 
-            mailer.send(Mail.withHtml(to, "Password Reset Request", html));
+            mailer.send(Mail.withHtml(to, "🔐 Password Reset Request - HTV OAuth2", html));
             log.info("Password reset email sent to: {}", to);
 
         } catch (Exception e) {
@@ -96,22 +105,41 @@ public class EmailService {
     public void sendBackupCodes(String to, String username, String backupCodes) {
         try {
             String html = String.format("""
-                <html>
-                <body>
-                    <h2>Your MFA Backup Codes</h2>
-                    <p>Hi %s,</p>
-                    <p>Here are your backup codes for two-factor authentication. Keep them safe!</p>
-                    <pre>%s</pre>
-                    <p><strong>Important:</strong> Each code can only be used once.</p>
-                </body>
-                </html>
-                """, username, backupCodes.replace(",", "\n"));
+                    <html>
+                    <body>
+                        <h2>Your MFA Backup Codes</h2>
+                        <p>Hi %s,</p>
+                        <p>Here are your backup codes for two-factor authentication. Keep them safe!</p>
+                        <pre>%s</pre>
+                        <p><strong>Important:</strong> Each code can only be used once.</p>
+                    </body>
+                    </html>
+                    """, username, backupCodes.replace(",", "\n"));
 
             mailer.send(Mail.withHtml(to, "Your MFA Backup Codes", html));
             log.info("Backup codes email sent to: {}", to);
 
         } catch (Exception e) {
             log.error("Failed to send backup codes email to: {}", to, e);
+        }
+    }
+
+    /**
+     * Send MFA backup codes with Qute template
+     */
+    public void sendBackupCodes(String to, String username, List<String> backupCodes) {
+        try {
+            String html = backupCodesTemplate
+                    .data("username", username)
+                    .data("backupCodesList", backupCodes)
+                    .render();
+
+            mailer.send(Mail.withHtml(to, "🔑 Your MFA Backup Codes - HTV OAuth2", html));
+            log.info("Backup codes email sent to: {}", to);
+
+        } catch (Exception e) {
+            log.error("Failed to send backup codes email to: {}", to, e);
+            throw new RuntimeException("Email sending failed", e);
         }
     }
 }

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "user_mfa_config")
+@Table(name = "mfa_config")
 public class MfaConfig {
 
     @Id
