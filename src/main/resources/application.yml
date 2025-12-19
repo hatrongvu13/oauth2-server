@@ -89,7 +89,7 @@ quarkus:
     locations: classpath:db/migration
     baseline-version: 1.0.0
     baseline-description: Initial baseline
-    clean-at-start: false
+    clean-at-start: true
 
   # ============================================
   # Redis Configuration
@@ -128,7 +128,8 @@ quarkus:
     console:
       format: >-
         %d{yyyy-MM-dd HH:mm:ss,SSS %-5p [%c{3.] (%t) %s%e%n
-
+      json:
+        enabled: false
     # Category levels
     category:
       "com.htv.oauth2": WARN
@@ -153,7 +154,7 @@ quarkus:
   # ============================================
   smallrye-jwt:
     enabled: true
-    issuer: ${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}
+    issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
     new-token:
       signature-algorithm: RS256
       audience: default-client-id
@@ -280,7 +281,7 @@ quarkus:
 mp:
   jwt:
     verify:
-      issuer: ${OAUTH2_JWT_ISSUER:https://oauth2.jaxtony.store}
+      issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
       audiences: default-client-id
       publickey:
         location: classpath:keys/public_key.pem
@@ -289,6 +290,7 @@ mp:
 # OAuth2 Custom Configuration
 # ============================================
 oauth2:
+  domain: https://oauth2.jaxtony.store
   # JWT Configuration
   jwt:
     access-token-expiry: 3600
@@ -338,6 +340,8 @@ smallrye:
     http:
       cors:
         origins: "*"
+  oauth2:
+    domain: http://localhost:8080
 
 "%test":
   quarkus:

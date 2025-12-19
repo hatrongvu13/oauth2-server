@@ -1,6 +1,6 @@
 package com.htv.oauth2.security;
 
-import com.htv.oauth2.service.CacheService;
+import com.htv.oauth2.service.cache.CacheService;
 import com.htv.oauth2.util.CryptoUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

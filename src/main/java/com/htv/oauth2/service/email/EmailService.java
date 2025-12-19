@@ -7,6 +7,7 @@ import io.quarkus.qute.Location;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,9 @@ import java.util.Map;
 @Slf4j
 @ApplicationScoped
 public class EmailService {
+
+    @ConfigProperty(name = "oauth2.domain")
+    String domain;
 
     @Inject
     Mailer mailer;
@@ -83,7 +87,7 @@ public class EmailService {
      */
     public void sendPasswordResetEmail(String to, String username, String resetToken) {
         try {
-            String resetUrl = "https://oauth2.htv.com/reset-password?token=" + resetToken;
+            String resetUrl = domain + "/reset-password?token=" + resetToken;
 
             String html = passwordResetTemplate
                     .data("username", username)

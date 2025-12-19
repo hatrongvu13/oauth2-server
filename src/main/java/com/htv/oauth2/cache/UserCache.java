@@ -2,7 +2,7 @@ package com.htv.oauth2.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.htv.oauth2.domain.User;
-import com.htv.oauth2.service.CacheService;
+import com.htv.oauth2.service.cache.CacheService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;

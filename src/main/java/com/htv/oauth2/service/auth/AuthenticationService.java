@@ -45,7 +45,7 @@ public class AuthenticationService {
         log.info("Authenticating user: {} from IP: {}", request.getUsername(), ipAddress);
 
         // 1. Check rate limiting (Sử dụng logic mới trả về boolean)
-        if (!rateLimitService.allowLogin(ipAddress)) {
+        if (rateLimitService.checkLogin(ipAddress).isBlocked()) {
             log.warn("Rate limit exceeded for IP: {}", ipAddress);
             auditService.logAnonymous("LOGIN_RATE_LIMIT", ipAddress,
                     "FAILURE", ipAddress, userAgent);
@@ -86,7 +86,6 @@ public class AuthenticationService {
 
         // 7. Successful Login: Reset rate limit and update stats
         userService.handleSuccessfulLogin(user.getId());
-        rateLimitService.resetLoginAttempts(ipAddress);
         auditService.logSuccess(user, "LOGIN_SUCCESS", null, ipAddress, userAgent);
 
         log.info("User authenticated successfully: {}", user.getId());
@@ -128,7 +127,7 @@ public class AuthenticationService {
         }
 
         // Check Rate Limit cho MFA (Sử dụng RateLimitService mới)
-        if (!rateLimitService.allowMfaAttempt(user.getId().toString())) {
+        if (rateLimitService.checkMfa(user.getId()).isBlocked()) {
             log.warn("MFA rate limit exceeded for user: {}", user.getId());
             auditService.logFailure(user, "MFA_RATE_LIMIT", "too_many_attempts",
                     "MFA rate limit exceeded", ipAddress, userAgent);
@@ -165,7 +164,7 @@ public class AuthenticationService {
     @Transactional
     public User verifyMfaSession(String userId, String mfaCode, String ipAddress, String userAgent) {
         // Kiểm tra rate limit cho MFA session
-        if (!rateLimitService.allowMfaAttempt(userId)) {
+        if (rateLimitService.checkMfa(userId).isBlocked()) {
             throw new RateLimitExceededException("Too many MFA attempts.", 60L);
         }
 

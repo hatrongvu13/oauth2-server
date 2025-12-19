@@ -8,7 +8,7 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import com.htv.oauth2.domain.MfaConfig;
 import com.htv.oauth2.exception.ResourceNotFoundException;
 import com.htv.oauth2.repository.MfaConfigRepository;
-import com.htv.oauth2.service.CacheService;
+import com.htv.oauth2.service.cache.CacheService;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;

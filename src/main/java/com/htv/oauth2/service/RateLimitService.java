@@ -1,113 +1,71 @@
 package com.htv.oauth2.service;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
+import com.htv.oauth2.dto.ratelimit.RateLimitResult;
+import com.htv.oauth2.service.ratelimit.EmailRateLimitService;
+import com.htv.oauth2.service.ratelimit.LoginRateLimitService;
+import com.htv.oauth2.service.ratelimit.MfaRateLimitService;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @ApplicationScoped
 public class RateLimitService {
 
-    private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> mfaBuckets = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> emailBuckets = new ConcurrentHashMap<>();
+    @Inject
+    LoginRateLimitService loginRateLimitService;
 
-    @ConfigProperty(name = "oauth2.rate-limit.login.capacity", defaultValue = "5")
-    int loginCapacity;
+    @Inject
+    MfaRateLimitService mfaRateLimitService;
 
-    @ConfigProperty(name = "oauth2.rate-limit.login.refill-period", defaultValue = "300")
-    int loginRefillPeriod;
+    @Inject
+    EmailRateLimitService emailRateLimitService;
 
-    @ConfigProperty(name = "oauth2.rate-limit.mfa.capacity", defaultValue = "3")
-    int mfaCapacity;
+    // ============= Login =============
 
-    @ConfigProperty(name = "oauth2.rate-limit.mfa.refill-period", defaultValue = "60")
-    int mfaRefillPeriod;
-
-    @ConfigProperty(name = "oauth2.rate-limit.email.capacity", defaultValue = "10")
-    int emailCapacity;
-
-    @ConfigProperty(name = "oauth2.rate-limit.email.refill-period", defaultValue = "3600")
-    int emailRefillPeriod;
-
-    /**
-     * Check login rate limit
-     */
-    public boolean allowLogin(String identifier) {
-        Bucket bucket = loginBuckets.computeIfAbsent(identifier, k -> createLoginBucket());
-        boolean allowed = bucket.tryConsume(1);
-
-        if (!allowed) {
-            log.warn("Login rate limit exceeded for: {}", identifier);
-        }
-
-        return allowed;
+    public RateLimitResult checkLogin(String identifier) {
+        return loginRateLimitService.checkLimit(identifier);
     }
 
-    /**
-     * Check MFA rate limit
-     */
-    public boolean allowMfaAttempt(String userId) {
-        Bucket bucket = mfaBuckets.computeIfAbsent(userId, k -> createMfaBucket());
-        boolean allowed = bucket.tryConsume(1);
-
-        if (!allowed) {
-            log.warn("MFA rate limit exceeded for: {}", userId);
-        }
-
-        return allowed;
+    public void resetLogin(String identifier) {
+        loginRateLimitService.resetLimit(identifier);
     }
 
-    /**
-     * Check email rate limit
-     */
-    public boolean allowEmail(String email) {
-        Bucket bucket = emailBuckets.computeIfAbsent(email, k -> createEmailBucket());
-        boolean allowed = bucket.tryConsume(1);
-
-        if (!allowed) {
-            log.warn("Email rate limit exceeded for: {}", email);
-        }
-
-        return allowed;
+    public long getRemainingLoginAttempts(String identifier) {
+        return loginRateLimitService.getRemainingCapacity(identifier);
     }
 
-    /**
-     * Reset login attempts (after successful login)
-     */
-    public void resetLoginAttempts(String identifier) {
-        loginBuckets.remove(identifier);
-        log.debug("Reset login attempts for: {}", identifier);
+    // ============= MFA =============
+
+    public RateLimitResult checkMfa(String userId) {
+        return mfaRateLimitService.checkLimit(userId);
     }
 
-    private Bucket createLoginBucket() {
-        Bandwidth limit = Bandwidth.classic(
-                loginCapacity,
-                Refill.intervally(loginCapacity, Duration.ofSeconds(loginRefillPeriod))
-        );
-        return Bucket.builder().addLimit(limit).build();
+    public void resetMfa(String userId) {
+        mfaRateLimitService.resetLimit(userId);
     }
 
-    private Bucket createMfaBucket() {
-        Bandwidth limit = Bandwidth.classic(
-                mfaCapacity,
-                Refill.intervally(mfaCapacity, Duration.ofSeconds(mfaRefillPeriod))
-        );
-        return Bucket.builder().addLimit(limit).build();
+    public long getRemainingMfaAttempts(String userId) {
+        return mfaRateLimitService.getRemainingCapacity(userId);
     }
 
-    private Bucket createEmailBucket() {
-        Bandwidth limit = Bandwidth.classic(
-                emailCapacity,
-                Refill.intervally(emailCapacity, Duration.ofSeconds(emailRefillPeriod))
-        );
-        return Bucket.builder().addLimit(limit).build();
+    // ============= Email =============
+
+    public RateLimitResult checkEmail(String email) {
+        return emailRateLimitService.checkLimit(email);
+    }
+
+    public long getRemainingEmailQuota(String email) {
+        return emailRateLimitService.getRemainingCapacity(email);
+    }
+
+    // ============= Batch Operations =============
+
+    public void resetAllForUser(String identifier) {
+        loginRateLimitService.resetLimit(identifier);
+        mfaRateLimitService.resetLimit(identifier);
+        emailRateLimitService.resetLimit(identifier);
+        log.info("Reset all rate limits for: {}", identifier);
     }
 }
