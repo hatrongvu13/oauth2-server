@@ -12,6 +12,15 @@ quarkus:
     version: 1.0.0
 
   # ============================================
+  # Native Build Configuration
+  # ============================================
+  native:
+    additional-build-args:
+      - -H:+UseSerialGC # normal
+#      - -H:+UseG1GC # higher
+      - -H:MaxRAMPercentage=75
+
+  # ============================================
   # ARC/CDI Configuration
   # ============================================
   arc:
