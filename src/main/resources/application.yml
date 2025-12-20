@@ -17,21 +17,13 @@ quarkus:
   native:
     additional-build-args:
       - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
-      - --initialize-at-run-time=java.security.SecureRandom
-      - -H:+ReportExceptionStackTraces
-      - --enable-all-security-services
-      - --allow-incomplete-classpath
-      - -initialize-at-run-time=io.lettuce.core
-      - --initialize-at-run-time=io.netty.resolver.dns
-      - --initialize-at-run-time=org.LatencyUtils
-      - --initialize-at-run-time=io.netty.handler.ssl
-      - -H:+AddAllCharsets
-      - -H:+ReportExceptionStackTraces
-      - -H:ReflectionConfigurationFiles=reflection-config.json
-      - -H:ResourceConfigurationFiles=resource-config.json
-      - -H:DynamicProxyConfigurationFiles=proxy-config.json
-      - --enable-url-protocols=http,https
-      - --allow-incomplete-classpath
+        - --initialize-at-run-time=java.security.SecureRandom
+        - --enable-all-security-services
+        - --enable-url-protocols=http,https
+        - -H:+AddAllCharsets
+        - -H:ReflectionConfigurationFiles=reflection-config.json
+        - -H:ResourceConfigurationFiles=resource-config.json
+        - -H:DynamicProxyConfigurationFiles=proxy-config.json
     enable-https-url-handler: true
     enable-http-url-handler: true
 
