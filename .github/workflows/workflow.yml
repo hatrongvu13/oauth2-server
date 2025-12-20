@@ -1,19 +1,22 @@
-name: docker-manifest
+name: Create Multi-Arch Manifest
 
 on:
   workflow_run:
     workflows:
-      - Build Quarkus Native Arm
       - Build Quarkus Native AMD64
+      - Build Quarkus Native Arm
     types:
       - completed
 
 jobs:
   manifest:
     runs-on: ubuntu-latest
+    # Chỉ chạy nếu workflow trigger là completed và cả hai architecture đã thành công gần đây
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(fromJson('["Build Quarkus Native AMD64", "Build Quarkus Native Arm"]'), github.event.workflow_run.name)
 
     steps:
-
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -21,16 +24,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create multi-arch manifest
+      - name: Create and push multi-arch manifest
         run: |
-          docker manifest create ghcr.io/${{ github.repository }}:latest \
-            ghcr.io/${{ github.repository }}:latest-amd64 \
-            ghcr.io/${{ github.repository }}:latest-arm64
+          IMAGE="ghcr.io/${{ github.repository }}"
 
-          docker manifest annotate ghcr.io/${{ github.repository }}:latest \
-            ghcr.io/${{ github.repository }}:latest-amd64 --arch amd64
+          # Xóa manifest cũ nếu tồn tại (an toàn hơn)
+          docker manifest rm $IMAGE:latest || true
 
-          docker manifest annotate ghcr.io/${{ github.repository }}:latest \
-            ghcr.io/htv/myapp:latest-arm64 --arch arm64
+          # Tạo mới manifest
+          docker manifest create $IMAGE:latest \
+            $IMAGE:latest-amd64 \
+            $IMAGE:latest-arm64
 
-          docker manifest push ghcr.io/${{ github.repository }}:latest
+          # Annotate đúng architecture
+          docker manifest annotate $IMAGE:latest $IMAGE:latest-amd64 --arch amd64 --os linux
+          docker manifest annotate $IMAGE:latest $IMAGE:latest-arm64 --arch arm64 --os linux
+
+          # Push manifest
+          docker manifest push $IMAGE:latest
+
+          echo "Multi-arch manifest created and pushed: $IMAGE:latest"
