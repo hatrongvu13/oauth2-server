@@ -28,9 +28,6 @@ jobs:
         run: |
           IMAGE="ghcr.io/${{ github.repository }}"
 
-          # Xóa manifest cũ nếu tồn tại (an toàn hơn)
-          docker manifest rm $IMAGE:latest || true
-
           # Tạo mới manifest
           docker manifest create $IMAGE:latest \
             $IMAGE:latest-amd64 \
