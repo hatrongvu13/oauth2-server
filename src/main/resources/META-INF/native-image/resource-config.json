@@ -9,6 +9,12 @@
       },
       {
         "pattern": "templates/.*\\.html"
+      },
+      {
+        "pattern": ".*\\.properties$"
+      },
+      {
+        "pattern": ".*\\.xml$"
       }
     ]
   }

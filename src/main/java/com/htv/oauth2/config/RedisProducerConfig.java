@@ -20,14 +20,29 @@ public class RedisProducerConfig {
     @ConfigProperty(name = "quarkus.redis.hosts", defaultValue = "redis://localhost:6379")
     String redisUrl;
 
-    private RedisClient redisClient;
-    private StatefulRedisConnection<String, byte[]> connection;
+    private volatile RedisClient redisClient;
+    private volatile StatefulRedisConnection<String, byte[]> connection;
+    private volatile ProxyManager<String> proxyManager;
 
     @Produces
     @ApplicationScoped
     public ProxyManager<String> proxyManager() {
+        // Lazy initialization để tránh lỗi GraalVM native image
+        if (proxyManager == null) {
+            synchronized (this) {
+                if (proxyManager == null) {
+                    initializeRedisConnection();
+                }
+            }
+        }
+        return proxyManager;
+    }
+
+    private void initializeRedisConnection() {
         try {
-            // Initialize Redis client
+            log.info("Initializing Redis connection for Bucket4j...");
+
+            // Create Redis client lazily
             redisClient = RedisClient.create(redisUrl);
 
             // Create connection with proper codec
@@ -38,8 +53,8 @@ public class RedisProducerConfig {
             String ping = connection.sync().ping();
             log.info("✅ Redis ProxyManager initialized successfully: {}", ping);
 
-            // Create and return ProxyManager
-            return LettuceBasedProxyManager.builderFor(connection).build();
+            // Create ProxyManager
+            proxyManager = LettuceBasedProxyManager.builderFor(connection).build();
 
         } catch (Exception e) {
             log.error("❌ Failed to initialize Redis ProxyManager", e);
@@ -49,13 +64,24 @@ public class RedisProducerConfig {
 
     @PreDestroy
     void cleanup() {
-        if (connection != null) {
-            connection.close();
-            log.info("Redis connection closed");
+        log.info("Shutting down Redis connections...");
+
+        if (connection != null && connection.isOpen()) {
+            try {
+                connection.close();
+                log.info("Redis connection closed");
+            } catch (Exception e) {
+                log.error("Error closing Redis connection", e);
+            }
         }
+
         if (redisClient != null) {
-            redisClient.shutdown();
-            log.info("Redis client shutdown");
+            try {
+                redisClient.shutdown();
+                log.info("Redis client shutdown");
+            } catch (Exception e) {
+                log.error("Error shutting down Redis client", e);
+            }
         }
     }
 }

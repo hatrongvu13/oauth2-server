@@ -1,0 +1,8 @@
+[
+  {
+    "interfaces": ["io.lettuce.core.api.sync.RedisCommands"]
+  },
+  {
+    "interfaces": ["io.lettuce.core.api.async.RedisAsyncCommands"]
+  }
+]
