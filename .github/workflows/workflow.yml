@@ -22,7 +22,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.TOKEN_CUSTOM }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -31,9 +31,19 @@ jobs:
         run: |
           IMAGE="ghcr.io/${{ github.repository }}"
 
+          # Kiểm tra xem cả hai image có tồn tại không
+          if docker manifest inspect $IMAGE:latest-amd64 > /dev/null && \
+          docker manifest inspect $IMAGE:latest-arm64 > /dev/null; then
+          
           docker buildx imagetools create \
-            --tag $IMAGE:latest \
-            $IMAGE:latest-amd64 \
-            $IMAGE:latest-arm64
-
+          --tag $IMAGE:latest \
+          $IMAGE:latest-amd64 \
+          $IMAGE:latest-arm64
+          
           echo "Multi-arch manifest created and pushed: $IMAGE:latest"
+          else
+          echo "One or both platform images not found. Skipping manifest creation."
+          echo "AMD64 exists: $(docker manifest inspect $IMAGE:latest-amd64 > /dev/null && echo yes || echo no)"
+          echo "ARM64 exists: $(docker manifest inspect $IMAGE:latest-arm64 > /dev/null && echo yes || echo no)"
+          exit 1  # hoặc exit 0 nếu muốn skip mà không fail workflow
+          fi
