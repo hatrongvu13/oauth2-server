@@ -12,18 +12,6 @@ quarkus:
     version: 1.0.0
 
   # ============================================
-  # Native Build Configuration
-  # ============================================
-  native:
-    additional-build-args:
-      - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
-      - --initialize-at-run-time=java.security.SecureRandom
-      - -H:+AddAllCharsets
-      - --enable-url-protocols=http,https
-      - -H:+ReportExceptionStackTraces
-      - -J-Dvertx.disableDnsResolver=true
-
-  # ============================================
   # ARC/CDI Configuration
   # ============================================
   arc:
