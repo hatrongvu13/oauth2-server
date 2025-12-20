@@ -17,10 +17,8 @@ quarkus:
   native:
     additional-build-args:
       - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
-        - --initialize-at-run-time=java.security.SecureRandom
-        - --enable-all-security-services
-        - --enable-url-protocols=http,https
-        - -H:+AddAllCharsets
+      - --initialize-at-run-time=java.security.SecureRandom
+      - -H:+AddAllCharsets
     enable-https-url-handler: true
     enable-http-url-handler: true
 
@@ -98,7 +96,7 @@ quarkus:
   # ============================================
   redis:
     hosts: redis://localhost:6379
-    password: 
+    password:
     database: 0
     timeout: 10s
     max-pool-size: 20
