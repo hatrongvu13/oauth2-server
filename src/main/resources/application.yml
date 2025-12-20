@@ -21,9 +21,6 @@ quarkus:
         - --enable-all-security-services
         - --enable-url-protocols=http,https
         - -H:+AddAllCharsets
-        - -H:ReflectionConfigurationFiles=reflection-config.json
-        - -H:ResourceConfigurationFiles=resource-config.json
-        - -H:DynamicProxyConfigurationFiles=proxy-config.json
     enable-https-url-handler: true
     enable-http-url-handler: true
 
