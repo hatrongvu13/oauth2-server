@@ -21,8 +21,7 @@ quarkus:
       - -H:+AddAllCharsets
       - --enable-url-protocols=http,https
       - -H:+ReportExceptionStackTraces
-    enable-https-url-handler: true
-    enable-http-url-handler: true
+      - -J-Dvertx.disableDnsResolver=true
 
   # ============================================
   # ARC/CDI Configuration
