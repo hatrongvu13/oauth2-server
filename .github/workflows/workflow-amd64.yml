@@ -1,4 +1,4 @@
-name: Build Quarkus Native Arm
+name: Build Quarkus Native AMD64
 
 on:
   push:

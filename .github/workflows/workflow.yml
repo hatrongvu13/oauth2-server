@@ -3,8 +3,8 @@ name: docker-manifest
 on:
   workflow_run:
     workflows:
-      - build-native-amd64
-      - build-native-arm64
+      - Build Quarkus Native Arm
+      - Build Quarkus Native AMD64
     types:
       - completed
 
