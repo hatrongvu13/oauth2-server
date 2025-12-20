@@ -19,6 +19,8 @@ quarkus:
       - --initialize-at-run-time=com.htv.oauth2.util.CryptoUtil$SecureRandomHolder
       - --initialize-at-run-time=java.security.SecureRandom
       - -H:+AddAllCharsets
+      - --enable-url-protocols=http,https
+      - -H:+ReportExceptionStackTraces
     enable-https-url-handler: true
     enable-http-url-handler: true
 
@@ -101,6 +103,10 @@ quarkus:
     timeout: 10s
     max-pool-size: 20
     max-pool-waiting: 24
+    use-native-transport: false
+    client-type: standalone
+  rest-client:
+    metrics-enabled: false
 
   # ============================================
   # Cache Configuration (Caffeine)
