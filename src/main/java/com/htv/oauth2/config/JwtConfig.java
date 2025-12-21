@@ -40,10 +40,10 @@ public class JwtConfig {
         log.info("Refresh Token Expiry: {}s", refreshTokenExpiry);
 
         // Verify keys exist and are valid
-        verifyKeyExists(privateKeyLocation, "Private Key");
-        verifyKeyExists(publicKeyLocation, "Public Key");
+//        verifyKeyExists(privateKeyLocation, "Private Key");
+//        verifyKeyExists(publicKeyLocation, "Public Key");
 
-        log.info("=== JWT Configuration Verified ===");
+//        log.info("=== JWT Configuration Verified ===");
     }
 
     private void verifyKeyExists(String location, String keyType) {
