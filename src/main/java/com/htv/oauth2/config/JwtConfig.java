@@ -32,18 +32,16 @@ public class JwtConfig {
     Long refreshTokenExpiry;
 
     void onStart(@Observes StartupEvent ev) {
-        log.info("=== JWT Configuration ===");
+        log.info("╔══════════════════════════════════════╗");
+        log.info("║      JWT Configuration Loaded        ║");
+        log.info("╚══════════════════════════════════════╝");
         log.info("Issuer: {}", issuer);
-        log.info("Sign Key Location: {}", privateKeyLocation);
-        log.info("Verify Key Location: {}", publicKeyLocation);
-        log.info("Access Token Expiry: {}s", accessTokenExpiry);
-        log.info("Refresh Token Expiry: {}s", refreshTokenExpiry);
-
-        // Verify keys exist and are valid
-//        verifyKeyExists(privateKeyLocation, "Private Key");
-//        verifyKeyExists(publicKeyLocation, "Public Key");
-
-//        log.info("=== JWT Configuration Verified ===");
+        log.info("Sign Key: {}", privateKeyLocation);
+        log.info("Verify Key: {}", publicKeyLocation);
+        log.info("Access Token TTL: {}s", accessTokenExpiry);
+        log.info("Refresh Token TTL: {}s", refreshTokenExpiry);
+        log.info("Keys will be loaded by SmallRye JWT on first use");
+        log.info("═══════════════════════════════════════");
     }
 
     private void verifyKeyExists(String location, String keyType) {
