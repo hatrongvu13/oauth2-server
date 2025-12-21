@@ -43,10 +43,6 @@
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7
 
-# Install curl for health checks
-RUN microdnf install -y curl && \
-    microdnf clean all
-
 WORKDIR /work/
 
 # Set permissions
@@ -70,7 +66,7 @@ USER 1001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8080/q/health/ready || exit 1
+  CMD test -f http://localhost:8080/q/health/ready || exit 1
 
 # Run the application
 ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]
