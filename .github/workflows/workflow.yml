@@ -1,13 +1,12 @@
 name: Create Multi-Arch Manifest
 
 on:
-  workflow_run:
-    workflows:
-      - Build Quarkus Native AMD64
-      - Build Quarkus Native Arm
-    types:
-      - completed
-
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
 jobs:
   build-native-amd:
     runs-on: ubuntu-latest
