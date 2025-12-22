@@ -4,13 +4,14 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+
 permissions:
   contents: read
   packages: write
+
 jobs:
   build-native-amd:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -20,9 +21,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-
-      - name: Setup QEMU (support ARM64 build)
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,7 +38,8 @@ jobs:
           ./mvnw clean package -Pnative -Dquarkus.native.container-build=true -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push Multi-Arch Image
+
+      - name: Build and Push AMD64 Image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -50,9 +49,10 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest-amd64
             ghcr.io/${{ github.repository }}:${{ github.sha }}-amd64
-  build-native-arm:
-    runs-on: ubuntu-22.04-arm64
 
+  build-native-arm:
+    # Sử dụng ARM runner giúp build native cực nhanh
+    runs-on: ubuntu-24.04-arm64
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -62,9 +62,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-
-      - name: Setup QEMU (support ARM64 build)
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -82,7 +79,8 @@ jobs:
           ./mvnw clean package -Pnative -Dquarkus.native.container-build=true -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push Multi-Arch Image
+
+      - name: Build and Push ARM64 Image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -92,15 +90,10 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest-arm64
             ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
+
   manifest:
     runs-on: ubuntu-latest
-    needs:
-      - build-native-amd
-      - build-native-arm
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      contains(fromJson('["Build Quarkus Native AMD64", "Build Quarkus Native Arm"]'), github.event.workflow_run.name)
-
+    needs: [build-native-amd, build-native-arm]
     steps:
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -115,20 +108,9 @@ jobs:
       - name: Create and push multi-arch manifest
         run: |
           IMAGE="ghcr.io/${{ github.repository }}"
-
-          # Kiểm tra xem cả hai image có tồn tại không
-          if docker manifest inspect $IMAGE:latest-amd64 > /dev/null && \
-          docker manifest inspect $IMAGE:latest-arm64 > /dev/null; then
           
           docker buildx imagetools create \
-          --tag $IMAGE:latest \
-          $IMAGE:latest-amd64 \
-          $IMAGE:latest-arm64
-          
-          echo "Multi-arch manifest created and pushed: $IMAGE:latest"
-          else
-          echo "One or both platform images not found. Skipping manifest creation."
-          echo "AMD64 exists: $(docker manifest inspect $IMAGE:latest-amd64 > /dev/null && echo yes || echo no)"
-          echo "ARM64 exists: $(docker manifest inspect $IMAGE:latest-arm64 > /dev/null && echo yes || echo no)"
-          exit 1  # hoặc exit 0 nếu muốn skip mà không fail workflow
-          fi
+            --tag $IMAGE:latest \
+            --tag $IMAGE:${{ github.sha }} \
+            $IMAGE:latest-amd64 \
+            $IMAGE:latest-arm64
