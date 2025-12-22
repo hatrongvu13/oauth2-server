@@ -1,6 +1,401 @@
+## ============================================
+## OAuth2 Server - Production Configuration
+## Hỗ trợ K8s/K3s ConfigMap & Environment Variables
+## ============================================
+#
+#quarkus:
+#  # ============================================
+#  # Application Info
+#  # ============================================
+#  application:
+#    name: oauth2-server
+#    version: 1.0.0
+#
+#  # ============================================
+#  # Native Build Configuration
+#  # ============================================
+#  native:
+#    additional-build-args:
+#      - -H:+UnlockExperimentalVMOptions
+#      - -H:ReflectionConfigurationResources=reflection-config.json
+#    enable-all-security-services: true
+#    native-image-xmx: 8g
+#    resources:
+#      includes: "*.pem,*.der,*.key,*.crt,*.jks,*.p12"
+#
+#  # ============================================
+#  # ARC/CDI Configuration
+#  # ============================================
+#  arc:
+#    unremovable-types:
+#      - com.htv.oauth2.config.LoggingInterceptor
+#    exclude-types:
+#      - com.htv.oauth2.config.Logged
+#
+#  # ============================================
+#  # HTTP Server Configuration
+#  # ============================================
+#  http:
+#    port: 8080
+#    host: 0.0.0.0
+#
+#    # CORS Configuration
+#    cors:
+#      ~: true
+#      origins: "*"
+#      methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+#      headers: accept,authorization,content-type,x-requested-with,x-api-key
+#      exposed-headers: Content-Disposition,X-Total-Count
+#      access-control-max-age: 24H
+#      access-control-allow-credentials: true
+#
+#  # ============================================
+#  # Database Configuration (PostgreSQL)
+#  # ============================================
+#  datasource:
+#    db-kind: postgresql
+#    username: root
+#    password: root
+#
+#    jdbc:
+#      url: jdbc:postgresql://localhost:5432/oauth2db
+#      max-size: 16
+#      min-size: 4
+#      acquisition-timeout: 10
+#      idle-removal-interval: 5M
+#      max-lifetime: 30M
+#      leak-detection-interval: 5M
+#      validation-query-sql: SELECT 1
+#      enable-metrics: true
+#
+#  # ============================================
+#  # Hibernate ORM Configuration
+#  # ============================================
+#  hibernate-orm:
+#    database:
+#      generation: none
+#    log:
+#      sql: false
+#      bind-parameters: false
+#      format-sql: false
+#    jdbc:
+#      statement-batch-size: 20
+#
+#  # ============================================
+#  # Flyway Migration
+#  # ============================================
+#  flyway:
+#    migrate-at-start: true
+#    baseline-on-migrate: true
+#    locations: classpath:db/migration
+#    baseline-version: 1.0.0
+#    baseline-description: Initial baseline
+#    clean-at-start: false
+#
+#  # ============================================
+#  # Redis Configuration
+#  # ============================================
+#  redis:
+#    hosts: redis://localhost:6379
+#    password:
+#    database: 0
+#    timeout: 10s
+#    max-pool-size: 20
+#    max-pool-waiting: 24
+#    use-native-transport: false
+#    client-type: standalone
+#  rest-client:
+#    metrics-enabled: false
+#
+#  # ============================================
+#  # Cache Configuration (Caffeine)
+#  # ============================================
+#  cache:
+#    caffeine:
+#      "user-cache":
+#        initial-capacity: 100
+#        maximum-size: 1000
+#        expire-after-write: 10M
+#      "client-cache":
+#        initial-capacity: 50
+#        maximum-size: 500
+#        expire-after-write: 30M
+#      "token-cache":
+#        initial-capacity: 200
+#        maximum-size: 2000
+#        expire-after-write: 5M
+#
+#  # ============================================
+#  # Logging Configuration
+#  # ============================================
+#  log:
+#    level: INFO
+#    console:
+#      format: >-
+#        %d{yyyy-MM-dd HH:mm:ss,SSS %-5p [%c{3.] (%t) %s%e%n
+#      json:
+#        enabled: false
+#    # Category levels
+#    category:
+#      "com.htv.oauth2": WARN
+#      "org.hibernate.SQL": WARN
+#      "org.hibernate.type.descriptor.sql.BasicBinder": WARN
+#      "io.quarkus": INFO
+#      "io.vertx": WARN
+#      "org.jboss": WARN
+#      "org.flywaydb": INFO
+#      "io.quarkus.bootstrap.classloading": INFO
+#
+#  # ============================================
+#  # Security Configuration
+#  # ============================================
+#  security:
+#    users:
+#      embedded:
+#        enabled: false
+#
+#  # ============================================
+#  # JWT Configuration (SmallRye JWT)
+#  # ============================================
+#  smallrye-jwt:
+#    enabled: true
+#    issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
+#    new-token:
+#      signature-algorithm: RS256
+#      audience: default-client-id
+#      lifespan: 3600
+#
+#  # ============================================
+#  # OpenAPI/Swagger Configuration
+#  # ============================================
+#  smallrye-openapi:
+#    path: /openapi
+#    info-title: OAuth2 Authorization Server API
+#    info-version: 1.0.0
+#    info-description: Production-ready OAuth2 Authorization Server with MFA support
+#    info-contact-email: hatrongvu13@gmail.com
+#    info-contact-name: OAuth2 Team
+#    servers: https://oauth2.jaxtony.store
+#
+#  swagger-ui:
+#    always-include: true
+#    path: /swagger-ui
+#    oauth2-redirect-url: /swagger-ui/oauth2-redirect.html
+#
+#  # ============================================
+#  # Health Check Configuration
+#  # ============================================
+#  smallrye-health:
+#    ui:
+#      root-path: /q/health-ui
+#    liveness-path: /q/health/live
+#    readiness-path: /q/health/ready
+#    liveness:
+#      enabled: true
+#    readiness:
+#      enabled: true
+#    startup:
+#      enabled: true
+#  # ============================================================================
+#  # HEALTH CHECK CONFIGURATION
+#  # ============================================================================
+#  health:
+#    extensions:
+#      enabled: true
+#    openapi:
+#      included: true
+#
+#  # ============================================
+#  # Metrics Configuration (Prometheus)
+#  # ============================================
+#  micrometer:
+#    enabled: true
+#    binder:
+#      jvm: true
+#      system: true
+#      http-server: true
+#    export:
+#      prometheus:
+#        enabled: true
+#        path: /q/metrics
+#        default-registry: true
+#
+#  # ============================================
+#  # Scheduler Configuration
+#  # ============================================
+#  scheduler:
+#    enabled: true
+#    start-mode: normal
+#
+#  # ============================================
+#  # Container Image Configuration (for K8s)
+#  # ============================================
+#  container-image:
+#    registry: docker.io
+#    group: jaxtony
+#    name: oauth2-server
+#    tag: latest
+#    build: false
+#    push: false
+#
+#  # Graceful shutdown
+#  shutdown:
+#    timeout: 30s
+#  # Thread pool for native
+#  thread-pool:
+#    core-threads: 2
+#    max-threads: 8
+#
+#  # ============================================
+#  # Kubernetes Configuration
+#  # ============================================
+#  kubernetes:
+#    deployment-target: kubernetes
+#    namespace: default
+#
+#    # Service configuration
+#    service-type: ClusterIP
+#
+#    # Health probes
+#    liveness-probe:
+#      http-action-path: /q/health/live
+#      initial-delay: 30s
+#      period: 10s
+#      timeout: 3s
+#      failure-threshold: 3
+#
+#    readiness-probe:
+#      http-action-path: /q/health/ready
+#      initial-delay: 10s
+#      period: 5s
+#      timeout: 3s
+#      failure-threshold: 3
+#
+#    # Resources
+#    resources:
+#      requests:
+#        memory: 256Mi
+#        cpu: 250m
+#      limits:
+#        memory: 512Mi
+#        cpu: 1000m
+#
+#    # Environment variables from ConfigMap/Secret
+#    env:
+#      configmaps: oauth2-config
+#      secrets: oauth2-secret
+#
+#    # Labels
+#    labels:
+#      app: oauth2-server
+#      version: v1
+#      tier: backend
+#  mailer:
+#    from: hatrongvu13@gmail.com
+#    host: smtp.gmail.com
+#    port: 587
+#    username: hatrongvu13@gmail.com
+#    password: your-app-password
+#    mock: false
+#  # Template location
+#  qute:
+#    template-path-exclude: META-INF/resources/.*$
+#
+## ============================================
+## MicroProfile JWT Configuration
+## ============================================
+#mp:
+#  jwt:
+#    verify:
+#      issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
+#      audiences: default-client-id
+#      publickey:
+#        location: classpath:keys/public_key.pem
+#
+## ============================================
+## OAuth2 Custom Configuration
+## ============================================
+#oauth2:
+#  domain: https://oauth2.jaxtony.store
+#  # JWT Configuration
+#  jwt:
+#    access-token-expiry: 3600
+#    refresh-token-expiry: 86400
+#
+#  # Authorization Code Configuration
+#  authorization-code:
+#    validity: 300
+#
+#  # Rate Limiting Configuration
+#  rate-limit:
+#    enabled: true
+#    # Login attempts
+#    login:
+#      capacity: 5          # Max 5 attempts
+#      refill-tokens: 5     # Refill 5 tokens
+#      refill-period: 300   # Every 5 minutes (300s)
+#    # MFA verification
+#    mfa:
+#      capacity: 3          # Max 3 attempts
+#      refill-tokens: 3
+#      refill-period: 60    # Every 1 minute
+#    # Email sending
+#    email:
+#      capacity: 10         # Max 10 emails
+#      refill-tokens: 10
+#      refill-period: 3600  # Per hour
+#
+#smallrye:
+#  jwt:
+#    sign:
+#      key:
+#        location: classpath:keys/private_key.pem
+## ============================================
+## Profile-specific Configuration
+## ============================================
+##"%dev":
+##  quarkus:
+##    log:
+##      level: WARN
+##      category:
+##        "com.htv.oauth2": WARN
+##    hibernate-orm:
+##      log:
+##        sql: true
+##        bind-parameters: true
+##    http:
+##      cors:
+##        origins: "*"
+##  oauth2:
+##    domain: http://localhost:8080
+##
+##"%test":
+##  quarkus:
+##    log:
+##      level: INFO
+##    datasource:
+##      jdbc:
+##        url: jdbc:postgresql://localhost:5432/oauth2db_test
+##    flyway:
+##      clean-at-start: true
+##
+##"%prod":
+##  quarkus:
+##    log:
+##      level: INFO
+##      console:
+##        json: true
+##      category:
+##        "com.htv.oauth2": INFO
+##    http:
+##      port: 8080
+##      host: 0.0.0.0
+#=======================================================
+#=======================================================
+
 # ============================================
 # OAuth2 Server - Production Configuration
-# Hỗ trợ K8s/K3s ConfigMap & Environment Variables
+# Optimized for K8s Native Deployment
 # ============================================
 
 quarkus:
@@ -15,47 +410,65 @@ quarkus:
   # Native Build Configuration
   # ============================================
   native:
-    additional-build-args:
+    # Resources to include in native image
+    resources:
+      includes: "*.pem,*.der,*.key,*.crt,*.jks,*.p12,db/migration/**"
 
-  # ============================================
-  # ARC/CDI Configuration
-  # ============================================
-  arc:
-    unremovable-types:
-      - com.htv.oauth2.config.LoggingInterceptor
-    exclude-types:
-      - com.htv.oauth2.config.Logged
+    # Build arguments - SIMPLIFIED (không trùng với native-image.properties)
+    additional-build-args:
+      - -H:+UnlockExperimentalVMOptions
+      - -H:ReflectionConfigurationResources=reflection-config.json
+      - -H:+AddAllCharsets
+
+    # Enable security services
+    enable-all-security-services: true
+
+    # Memory for build process
+    native-image-xmx: 8g
+
+    # Container build
+    container-build: true
+    builder-image: quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
 
   # ============================================
   # HTTP Server Configuration
   # ============================================
   http:
-    port: 8080
-    host: 0.0.0.0
+    port: ${QUARKUS_HTTP_PORT:8080}
+    host: ${QUARKUS_HTTP_HOST:0.0.0.0}
 
     # CORS Configuration
     cors:
       ~: true
-      origins: "*"
+      origins: ${QUARKUS_HTTP_CORS_ORIGINS:*}
       methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
       headers: accept,authorization,content-type,x-requested-with,x-api-key
       exposed-headers: Content-Disposition,X-Total-Count
       access-control-max-age: 24H
       access-control-allow-credentials: true
 
+    # Limits
+    limits:
+      max-body-size: 10M
+
+    # Idle timeout
+    idle-timeout: 30s
+
   # ============================================
   # Database Configuration (PostgreSQL)
   # ============================================
   datasource:
     db-kind: postgresql
-    username: root
-    password: root
+    # Credentials từ K8s Secret
+    username: ${QUARKUS_DATASOURCE_USERNAME:root}
+    password: ${QUARKUS_DATASOURCE_PASSWORD:root}
 
     jdbc:
-      url: jdbc:postgresql://localhost:5432/oauth2db
+      url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}
+      # Connection pool settings
       max-size: 16
       min-size: 4
-      acquisition-timeout: 10
+      acquisition-timeout: 10s
       idle-removal-interval: 5M
       max-lifetime: 30M
       leak-detection-interval: 5M
@@ -67,39 +480,45 @@ quarkus:
   # ============================================
   hibernate-orm:
     database:
-      generation: none
+      generation: none  # Flyway quản lý schema
     log:
       sql: false
       bind-parameters: false
       format-sql: false
     jdbc:
       statement-batch-size: 20
+    # Second level cache
+    cache:
+      "com.htv.oauth2.entity.*":
+        expiration:
+          max-idle: 10M
 
   # ============================================
   # Flyway Migration
   # ============================================
   flyway:
-    migrate-at-start: true
+    migrate-at-start: ${QUARKUS_FLYWAY_MIGRATE_AT_START:true}
     baseline-on-migrate: true
-    locations: classpath:db/migration
     baseline-version: 1.0.0
     baseline-description: Initial baseline
-    clean-at-start: false
+    clean-at-start: ${QUARKUS_FLYWAY_CLEAN_AT_START:false}
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    out-of-order: false
 
   # ============================================
   # Redis Configuration
   # ============================================
   redis:
-    hosts: redis://localhost:6379
-    password:
+    hosts: ${QUARKUS_REDIS_HOSTS:redis://localhost:6379}
+    password: ${QUARKUS_REDIS_PASSWORD:}
     database: 0
     timeout: 10s
     max-pool-size: 20
     max-pool-waiting: 24
-    use-native-transport: false
     client-type: standalone
-  rest-client:
-    metrics-enabled: false
+    # Native image compatibility
+    use-native-transport: false
 
   # ============================================
   # Cache Configuration (Caffeine)
@@ -123,41 +542,33 @@ quarkus:
   # Logging Configuration
   # ============================================
   log:
-    level: INFO
+    level: ${QUARKUS_LOG_LEVEL:INFO}
     console:
-      format: >-
-        %d{yyyy-MM-dd HH:mm:ss,SSS %-5p [%c{3.] (%t) %s%e%n
+      format: '%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{3.}] (%t) %s%e%n'
       json:
-        enabled: false
+        enabled: false  # Enable in production nếu cần structured logging
+
     # Category levels
     category:
-      "com.htv.oauth2": WARN
+      "com.htv.oauth2": ${QUARKUS_LOG_CATEGORY_COM_HTV_OAUTH2_LEVEL:INFO}
       "org.hibernate.SQL": WARN
       "org.hibernate.type.descriptor.sql.BasicBinder": WARN
       "io.quarkus": INFO
       "io.vertx": WARN
       "org.jboss": WARN
       "org.flywaydb": INFO
-      "io.quarkus.bootstrap.classloading": INFO
-
-  # ============================================
-  # Security Configuration
-  # ============================================
-  security:
-    users:
-      embedded:
-        enabled: false
 
   # ============================================
   # JWT Configuration (SmallRye JWT)
   # ============================================
   smallrye-jwt:
     enabled: true
-    issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
+    issuer: ${QUARKUS_SMALLRYE_JWT_ISSUER:iamhatrongvu}
+    # Token settings
     new-token:
       signature-algorithm: RS256
       audience: default-client-id
-      lifespan: 3600
+      lifespan: 3600  # 1 hour
 
   # ============================================
   # OpenAPI/Swagger Configuration
@@ -166,10 +577,10 @@ quarkus:
     path: /openapi
     info-title: OAuth2 Authorization Server API
     info-version: 1.0.0
-    info-description: Production-ready OAuth2 Authorization Server with MFA support
+    info-description: Production-ready OAuth2 Authorization Server with MFA
     info-contact-email: hatrongvu13@gmail.com
     info-contact-name: OAuth2 Team
-    servers: https://oauth2.jaxtony.store
+    servers: ${OAUTH2_DOMAIN:https://oauth2.jaxtony.store}
 
   swagger-ui:
     always-include: true
@@ -181,16 +592,26 @@ quarkus:
   # ============================================
   smallrye-health:
     ui:
-      enable: true
       root-path: /q/health-ui
-    liveness-path: /q/health/live
-    readiness-path: /q/health/ready
+      always-include: true
+    liveness:
+      enabled: true
+    readiness:
+      enabled: true
+    startup:
+      enabled: true
+
+  health:
+    extensions:
+      enabled: ${QUARKUS_HEALTH_EXTENSIONS_ENABLED:true}
+    openapi:
+      included: true
 
   # ============================================
   # Metrics Configuration (Prometheus)
   # ============================================
   micrometer:
-    enabled: true
+    enabled: ${QUARKUS_MICROMETER_ENABLED:true}
     binder:
       jvm: true
       system: true
@@ -209,70 +630,47 @@ quarkus:
     start-mode: normal
 
   # ============================================
-  # Container Image Configuration (for K8s)
+  # Mailer Configuration
   # ============================================
-  container-image:
-    registry: docker.io
-    group: jaxtony
-    name: oauth2-server
-    tag: latest
-    build: false
-    push: false
-
-  # ============================================
-  # Kubernetes Configuration
-  # ============================================
-  kubernetes:
-    deployment-target: kubernetes
-    namespace: default
-
-    # Service configuration
-    service-type: ClusterIP
-
-    # Health probes
-    liveness-probe:
-      http-action-path: /q/health/live
-      initial-delay: 30s
-      period: 10s
-      timeout: 3s
-      failure-threshold: 3
-
-    readiness-probe:
-      http-action-path: /q/health/ready
-      initial-delay: 10s
-      period: 5s
-      timeout: 3s
-      failure-threshold: 3
-
-    # Resources
-    resources:
-      requests:
-        memory: 256Mi
-        cpu: 250m
-      limits:
-        memory: 512Mi
-        cpu: 1000m
-
-    # Environment variables from ConfigMap/Secret
-    env:
-      configmaps: oauth2-config
-      secrets: oauth2-secret
-
-    # Labels
-    labels:
-      app: oauth2-server
-      version: v1
-      tier: backend
   mailer:
-    from: hatrongvu13@gmail.com
-    host: smtp.gmail.com
-    port: 587
-    username: hatrongvu13@gmail.com
-    password: your-app-password
+    from: ${QUARKUS_MAILER_FROM:hatrongvu13@gmail.com}
+    host: ${QUARKUS_MAILER_HOST:smtp.gmail.com}
+    port: ${QUARKUS_MAILER_PORT:587}
+    username: ${QUARKUS_MAILER_USERNAME:hatrongvu13@gmail.com}
+    password: ${QUARKUS_MAILER_PASSWORD}
+    start-tls: REQUIRED
     mock: false
-  # Template location
+
+  # ============================================
+  # Qute Template Configuration
+  # ============================================
   qute:
-    template-path-exclude: META-INF/resources/.*$
+    content-types:
+      html: text/html
+    property-not-found-strategy: throw-exception
+
+  # ============================================
+  # Shutdown Configuration
+  # ============================================
+  shutdown:
+    timeout: 30s
+
+  # ============================================
+  # Thread Pool (Native Optimized)
+  # ============================================
+  thread-pool:
+    core-threads: 2
+    max-threads: 8
+    queue-size: 1000
+
+  # ============================================
+  # ARC/CDI Configuration
+  # ============================================
+  arc:
+    unremovable-types:
+      - com.htv.oauth2.config.LoggingInterceptor
+    exclude-types:
+      - com.htv.oauth2.config.Logged
 
 # ============================================
 # MicroProfile JWT Configuration
@@ -280,86 +678,105 @@ quarkus:
 mp:
   jwt:
     verify:
-      issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
+      issuer: ${QUARKUS_SMALLRYE_JWT_ISSUER:iamhatrongvu}
       audiences: default-client-id
+      # KEY LOCATION - Sẽ được override bởi environment variable
       publickey:
-        location: classpath:keys/public_key.pem
+        location: ${MP_JWT_VERIFY_PUBLICKEY_LOCATION:/keys/public_key.pem}
+
+# ============================================
+# SmallRye JWT Sign Configuration
+# ============================================
+smallrye:
+  jwt:
+    sign:
+      key:
+        # KEY LOCATION - Sẽ được override bởi environment variable
+        location: ${SMALLRYE_JWT_SIGN_KEY_LOCATION:/keys/private_key.pem}
 
 # ============================================
 # OAuth2 Custom Configuration
 # ============================================
 oauth2:
-  domain: https://oauth2.jaxtony.store
+  domain: ${OAUTH2_DOMAIN:https://oauth2.jaxtony.store}
+
   # JWT Configuration
   jwt:
-    access-token-expiry: 3600
-    refresh-token-expiry: 86400
+    issuer: ${OAUTH2_JWT_ISSUER:iamhatrongvu}
+    access-token-expiry: 3600      # 1 hour
+    refresh-token-expiry: 86400    # 24 hours
+    id-token-expiry: 3600          # 1 hour
 
   # Authorization Code Configuration
   authorization-code:
-    validity: 300
+    validity: 300  # 5 minutes
 
   # Rate Limiting Configuration
   rate-limit:
     enabled: true
+
     # Login attempts
     login:
-      capacity: 5          # Max 5 attempts
-      refill-tokens: 5     # Refill 5 tokens
-      refill-period: 300   # Every 5 minutes (300s)
+      capacity: 5
+      refill-tokens: 5
+      refill-period: 300  # 5 minutes
+
     # MFA verification
     mfa:
-      capacity: 3          # Max 3 attempts
+      capacity: 3
       refill-tokens: 3
-      refill-period: 60    # Every 1 minute
+      refill-period: 60  # 1 minute
+
     # Email sending
     email:
-      capacity: 10         # Max 10 emails
+      capacity: 10
       refill-tokens: 10
-      refill-period: 3600  # Per hour
+      refill-period: 3600  # 1 hour
 
-smallrye:
-  jwt:
-    sign:
-      key:
-        location: classpath:keys/private_key.pem
 # ============================================
 # Profile-specific Configuration
 # ============================================
-#"%dev":
-#  quarkus:
-#    log:
-#      level: WARN
-#      category:
-#        "com.htv.oauth2": WARN
-#    hibernate-orm:
-#      log:
-#        sql: true
-#        bind-parameters: true
-#    http:
-#      cors:
-#        origins: "*"
-#  oauth2:
-#    domain: http://localhost:8080
-#
-#"%test":
-#  quarkus:
-#    log:
-#      level: INFO
-#    datasource:
-#      jdbc:
-#        url: jdbc:postgresql://localhost:5432/oauth2db_test
-#    flyway:
-#      clean-at-start: true
-#
-#"%prod":
-#  quarkus:
-#    log:
-#      level: INFO
-#      console:
-#        json: true
-#      category:
-#        "com.htv.oauth2": INFO
-#    http:
-#      port: 8080
-#      host: 0.0.0.0
+
+# Development Profile
+"%dev":
+  quarkus:
+    log:
+      level: DEBUG
+      category:
+        "com.htv.oauth2": DEBUG
+        "org.hibernate.SQL": DEBUG
+    hibernate-orm:
+      log:
+        sql: true
+        bind-parameters: true
+    http:
+      cors:
+        origins: "*"
+  oauth2:
+    domain: http://localhost:8080
+
+# Test Profile
+"%test":
+  quarkus:
+    log:
+      level: INFO
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/oauth2db_test
+    flyway:
+      clean-at-start: true
+    redis:
+      hosts: redis://localhost:6379
+
+# Production Profile (K8s)
+"%prod":
+  quarkus:
+    log:
+      level: INFO
+      console:
+        json: false  # Set true nếu dùng log aggregator như ELK
+      category:
+        "com.htv.oauth2": INFO
+    http:
+      port: 8080
+      host: 0.0.0.0
