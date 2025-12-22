@@ -326,40 +326,40 @@ smallrye:
 # ============================================
 # Profile-specific Configuration
 # ============================================
-"%dev":
-  quarkus:
-    log:
-      level: WARN
-      category:
-        "com.htv.oauth2": WARN
-    hibernate-orm:
-      log:
-        sql: true
-        bind-parameters: true
-    http:
-      cors:
-        origins: "*"
-  oauth2:
-    domain: http://localhost:8080
-
-"%test":
-  quarkus:
-    log:
-      level: INFO
-    datasource:
-      jdbc:
-        url: jdbc:postgresql://localhost:5432/oauth2db_test
-    flyway:
-      clean-at-start: true
-
-"%prod":
-  quarkus:
-    log:
-      level: INFO
-      console:
-        json: true
-      category:
-        "com.htv.oauth2": INFO
-    http:
-      port: 8080
-      host: 0.0.0.0
+#"%dev":
+#  quarkus:
+#    log:
+#      level: WARN
+#      category:
+#        "com.htv.oauth2": WARN
+#    hibernate-orm:
+#      log:
+#        sql: true
+#        bind-parameters: true
+#    http:
+#      cors:
+#        origins: "*"
+#  oauth2:
+#    domain: http://localhost:8080
+#
+#"%test":
+#  quarkus:
+#    log:
+#      level: INFO
+#    datasource:
+#      jdbc:
+#        url: jdbc:postgresql://localhost:5432/oauth2db_test
+#    flyway:
+#      clean-at-start: true
+#
+#"%prod":
+#  quarkus:
+#    log:
+#      level: INFO
+#      console:
+#        json: true
+#      category:
+#        "com.htv.oauth2": INFO
+#    http:
+#      port: 8080
+#      host: 0.0.0.0
