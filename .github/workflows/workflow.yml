@@ -9,9 +9,95 @@ on:
       - completed
 
 jobs:
+  build-native-amd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup QEMU (support ARM64 build)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Quarkus Native Binary
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -Pnative -Dquarkus.native.container-build=true -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push Multi-Arch Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/main/docker/Dockerfile.native
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest-amd64
+            ghcr.io/${{ github.repository }}:${{ github.sha }}-amd64
+  build-native-arm:
+    runs-on: ubuntu-22.04-arm64
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup QEMU (support ARM64 build)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Quarkus Native Binary
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -Pnative -Dquarkus.native.container-build=true -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push Multi-Arch Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/main/docker/Dockerfile.native
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest-arm64
+            ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
   manifest:
     runs-on: ubuntu-latest
-    # Chỉ chạy nếu workflow trigger là completed và cả hai architecture đã thành công gần đây
+    needs:
+      - build-native-amd
+      - build-native-arm
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       contains(fromJson('["Build Quarkus Native AMD64", "Build Quarkus Native Arm"]'), github.event.workflow_run.name)
