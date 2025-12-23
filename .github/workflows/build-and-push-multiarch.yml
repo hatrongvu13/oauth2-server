@@ -194,23 +194,3 @@ jobs:
           echo "**Tags**:" >> $GITHUB_STEP_SUMMARY
           echo "- \`latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Send Telegram notification on success
-        if: success()
-        run: |
-          chmod +x ./send-telegram-notification.sh
-          ./send-telegram-notification.sh
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
-      - name: Send Telegram notification on failure
-        if: failure()
-        run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d text="❌ *Build Failed!*%0AProject: \`${{ github.repository }}\`%0ABranch: \`${{ github.ref_name }}\`%0APlease check the logs." \
-            -d parse_mode="Markdown"
