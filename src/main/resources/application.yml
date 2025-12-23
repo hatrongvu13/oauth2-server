@@ -453,6 +453,8 @@ quarkus:
 
     # Idle timeout
     idle-timeout: 30s
+  netty:
+    native-ossl: false
 
   # ============================================
   # Database Configuration (PostgreSQL)
