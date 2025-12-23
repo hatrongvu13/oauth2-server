@@ -47,7 +47,11 @@ public class RedisProducerConfig {
     @ApplicationScoped
     public ProxyManager<String> proxyManager() {
         if (proxyManager == null) {
-            throw new IllegalStateException("ProxyManager not initialized");
+            synchronized (this) {
+                if (proxyManager == null) {
+                    initializeProxyManager();
+                }
+            }
         }
         return proxyManager;
     }
