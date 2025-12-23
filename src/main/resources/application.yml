@@ -416,9 +416,15 @@ quarkus:
 
     # Build arguments - SIMPLIFIED (không trùng với native-image.properties)
     additional-build-args:
-      - -H:+UnlockExperimentalVMOptions
-      - -H:ReflectionConfigurationResources=reflection-config.json
+      - --initialize-at-run-time=io.lettuce.core.resource.DefaultClientResources
+      - --initialize-at-run-time=io.netty.resolver.dns.DnsNameResolverBuilder
+      - --initialize-at-run-time=io.netty.resolver.dns.DnsAddressResolverGroup
+      - --initialize-at-run-time=org.LatencyUtils.PauseDetector
+      - --initialize-at-run-time=io.netty.handler.ssl
+      - --initialize-at-run-time=io.netty.internal.tcnative
+      - -H:+ReportExceptionStackTraces
       - -H:+AddAllCharsets
+      - --enable-url-protocols=http,https
 
     # Enable security services
     enable-all-security-services: true
