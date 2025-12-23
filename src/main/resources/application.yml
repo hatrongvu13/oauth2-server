@@ -453,6 +453,9 @@ quarkus:
 
     # Idle timeout
     idle-timeout: 30s
+  # ============================================
+  # Native Image SSL Configuration
+  # ============================================
   netty:
     native-ossl: false
     use-native-transport: false

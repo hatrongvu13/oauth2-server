@@ -123,6 +123,8 @@ jobs:
             -Dquarkus.native.container-build=true \
             -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
             -Dquarkus.native.additional-build-args="-march=armv8-a" \
+            -Dquarkus.native.native-image-xmx=6g \
+            -Dquarkus.native.container-build=false \
             -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
