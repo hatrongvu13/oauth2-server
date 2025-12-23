@@ -194,6 +194,10 @@ jobs:
           echo "**Tags**:" >> $GITHUB_STEP_SUMMARY
           echo "- \`latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Send Telegram notification on success
         if: success()
         run: |
