@@ -1,8 +1,5 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7
 
-# Get build arguments
-ARG TARGETARCH
-
 WORKDIR /work/
 
 # Set permissions
@@ -17,7 +14,7 @@ RUN mkdir -p /keys \
 
 # Copy the correct native executable based on architecture
 # The binary was renamed during build: application-amd64 or application-arm64
-COPY --chown=1001:root --chmod=0755 target/application-${TARGETARCH} /work/application
+COPY --chown=1001:root --chmod=0755 target/*-runner /work/application
 
 # Expose application port
 EXPOSE 8080

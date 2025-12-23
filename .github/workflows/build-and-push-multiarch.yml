@@ -33,13 +33,13 @@ jobs:
           java-version: 21
           cache: maven
 
-#      - name: Cache Quarkus dependencies
-#        uses: actions/cache@v4
-#        with:
-#          path: ~/.m2/repository
-#          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-#          restore-keys: |
-#            ${{ runner.os }}-maven-
+      - name: Cache Quarkus dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -61,10 +61,6 @@ jobs:
             -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Rename binary
-        run: |
-          mv target/*-runner target/application-amd64
 
       - name: Build and Push AMD64 Image
         id: build
@@ -98,13 +94,13 @@ jobs:
           java-version: 21
           cache: maven
 
-#      - name: Cache Quarkus dependencies
-#        uses: actions/cache@v4
-#        with:
-#          path: ~/.m2/repository
-#          key: ${{ runner.os }}-maven-arm-${{ hashFiles('**/pom.xml') }}
-#          restore-keys: |
-#            ${{ runner.os }}-maven-arm-
+      - name: Cache Quarkus dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-arm-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-arm-
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -129,9 +125,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Rename binary
-        run: |
-          mv target/*-runner target/application-arm64
 
       - name: Build and Push ARM64 Image
         id: build
