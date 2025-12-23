@@ -418,7 +418,6 @@ quarkus:
     additional-build-args:
       - --initialize-at-run-time=io.lettuce.core.resource.DefaultClientResources
       - --initialize-at-run-time=io.netty.resolver.dns.DnsNameResolverBuilder
-      - --initialize-at-run-time=io.netty.resolver.dns.DnsAddressResolverGroup
       - --initialize-at-run-time=org.LatencyUtils.PauseDetector
       - --initialize-at-run-time=io.netty.handler.ssl
       - --initialize-at-run-time=io.netty.internal.tcnative
