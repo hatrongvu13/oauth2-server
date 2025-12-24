@@ -19,8 +19,6 @@ jobs:
   # Job 1: Build AMD64
   build-amd64:
     runs-on: ubuntu-latest
-    outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
@@ -32,14 +30,6 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
-
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -53,21 +43,16 @@ jobs:
 
       - name: Build Native Binary (AMD64)
         run: |
-          chmod +x mvnw
           ./mvnw clean package -Pnative \
             -Dquarkus.native.container-build=true \
             -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
-            -Dquarkus.native.additional-build-args="-march=x86-64-v3" \
             -DskipTests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push AMD64 Image
-        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.native-multiarch
+          file: src/main/docker/Dockerfile.native
           platforms: linux/amd64
           push: true
           tags: |
@@ -77,11 +62,9 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd64
           provenance: false
 
-  # Job 2: Build ARM64 for Pi 4 (ARMv8-A)
+  # Job 2: Build ARM64 for Pi 4
   build-arm64-pi4:
     runs-on: ubuntu-latest
-    outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
@@ -99,14 +82,6 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-arm64-pi4-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-arm64-
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -117,41 +92,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Native Binary (ARM64 for Pi 4 - ARMv8-A)
+      - name: Build Native Binary (ARM64 - Pi 4)
         run: |
-          chmod +x mvnw
           ./mvnw clean package -Pnative \
             -Dquarkus.native.container-build=true \
             -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
             -Dquarkus.native.container-runtime-options=--platform=linux/arm64 \
-            -Dquarkus.native.additional-build-args="-march=armv8-a" \
             -DskipTests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push ARM64 Pi4 Image
-        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.native-multiarch
+          file: src/main/docker/Dockerfile.native
           platforms: linux/arm64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi4
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
-          cache-from: type=gha,scope=arm64-pi4
-          cache-to: type=gha,mode=max,scope=arm64-pi4
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
           provenance: false
-          build-args: |
-            ARCH_VARIANT=armv8-a
+          labels: |
+            org.opencontainers.image.title=OAuth2 Server ARM64
+            org.opencontainers.image.description=Optimized for Raspberry Pi 4/5
 
-  # Job 3: Build ARM64 for Pi 5 (ARMv8.2-A)
+  # Job 3: Build ARM64 for Pi 5 (with specific optimizations)
   build-arm64-pi5:
     runs-on: ubuntu-latest
-    outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
@@ -169,14 +138,6 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-arm64-pi5-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-arm64-
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -187,24 +148,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Native Binary (ARM64 for Pi 5 - ARMv8.2-A)
+      - name: Build Native Binary (ARM64 - Pi 5 optimized)
         run: |
-          chmod +x mvnw
           ./mvnw clean package -Pnative \
             -Dquarkus.native.container-build=true \
             -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
             -Dquarkus.native.container-runtime-options=--platform=linux/arm64 \
-            -Dquarkus.native.additional-build-args="-march=armv8.2-a,-mcpu=cortex-a76" \
+            -Dquarkus.native.additional-build-args=-march=armv8.2-a \
             -DskipTests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push ARM64 Pi5 Image
-        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.native-multiarch
+          file: src/main/docker/Dockerfile.native
           platforms: linux/arm64
           push: true
           tags: |
@@ -213,10 +170,11 @@ jobs:
           cache-from: type=gha,scope=arm64-pi5
           cache-to: type=gha,mode=max,scope=arm64-pi5
           provenance: false
-          build-args: |
-            ARCH_VARIANT=armv8.2-a
+          labels: |
+            org.opencontainers.image.title=OAuth2 Server Pi5
+            org.opencontainers.image.description=Optimized for Raspberry Pi 5 (ARMv8.2-A)
 
-  # Job 4: Create multi-arch manifest (AMD64 + ARM64 generic)
+  # Job 4: Create multi-arch manifest
   create-manifest:
     runs-on: ubuntu-latest
     needs: [build-amd64, build-arm64-pi4]
@@ -230,66 +188,47 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest
+      - name: Create multi-arch manifest
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           
-          # Verify images exist
-          echo "🔍 Verifying AMD64 image..."
-          docker manifest inspect $IMAGE:latest-amd64
-          
-          echo "🔍 Verifying ARM64 image..."
-          docker manifest inspect $IMAGE:latest-arm64
-          
-          # Create manifest for 'latest' tag (AMD64 + ARM64)
-          echo "📦 Creating multi-arch manifest..."
+          # Create manifest for 'latest' tag
           docker buildx imagetools create \
             --tag $IMAGE:latest \
             $IMAGE:latest-amd64 \
             $IMAGE:latest-arm64
           
-          # Create manifest for commit SHA tag
+          # Create manifest for commit SHA
           docker buildx imagetools create \
             --tag $IMAGE:${{ github.sha }} \
             $IMAGE:${{ github.sha }}-amd64 \
             $IMAGE:${{ github.sha }}-arm64
           
-          echo "✅ Multi-arch manifest created successfully"
-          
-          # Inspect final manifest
+          echo "✅ Multi-arch manifest created"
           docker buildx imagetools inspect $IMAGE:latest
 
       - name: Summary
         run: |
-          cat << EOF >> $GITHUB_STEP_SUMMARY
-          ### 🎉 Multi-arch images published
+          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ### 🎉 Multi-arch Native Images Published
           
-          **Base Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`
-          
-          #### Available Tags:
-          
-          | Tag | Platform | Optimized For |
-          |-----|----------|---------------|
-          | \`latest\` | linux/amd64, linux/arm64 | General use |
-          | \`latest-amd64\` | linux/amd64 | x86-64-v3 |
-          | \`latest-arm64\` | linux/arm64 | ARMv8-A (Pi 4) |
-          | \`pi4\` | linux/arm64 | Raspberry Pi 4 |
-          | \`pi5\` | linux/arm64 | Raspberry Pi 5 (ARMv8.2-A) |
-          | \`${{ github.sha }}\` | linux/amd64, linux/arm64 | This commit |
+          | Tag | Platforms | Optimized For |
+          |-----|-----------|---------------|
+          | `latest` | amd64, arm64 | General use |
+          | `latest-amd64` | amd64 | x86-64 |
+          | `latest-arm64` | arm64 | ARMv8-A (Pi 4 compatible) |
+          | `pi4` | arm64 | Raspberry Pi 4 |
+          | `pi5` | arm64 | Raspberry Pi 5 (ARMv8.2-A) |
           
           #### Pull Commands:
-          
-          \`\`\`bash
-          # Multi-arch (auto-detect)
+          ```bash
+          # Auto-detect platform
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           
-          # Raspberry Pi 4 (ARMv8-A)
+          # Raspberry Pi 4
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi4
           
-          # Raspberry Pi 5 (ARMv8.2-A - optimized)
+          # Raspberry Pi 5 (optimized)
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi5
-          
-          # AMD64
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64
-          \`\`\`
+          ```
           EOF
