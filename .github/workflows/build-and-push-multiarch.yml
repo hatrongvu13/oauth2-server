@@ -76,6 +76,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+      - name: Build and Push AMD64 Image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/main/docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-jvm
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
 
   # Job 2: Build ARM64
   build-arm64:
