@@ -18,11 +18,4 @@ COPY --chown=1001:root --chmod=0755 target/*-runner /work/application
 EXPOSE 8080
 USER 1001
 
-# ARM-optimized environment variables
-ENV MALLOC_ARENA_MAX=2 \
-    MALLOC_MMAP_THRESHOLD_=131072 \
-    MALLOC_TRIM_THRESHOLD_=131072 \
-    MALLOC_MMAP_MAX_=65536
-
-# NO healthcheck with curl (ubi-minimal doesn't have it)
 ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]
