@@ -123,6 +123,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
       - name: Build and Push ARM64 Image
         id: build
         uses: docker/build-push-action@v6
@@ -138,73 +139,10 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
 
-  # Job 3: Build JVM Image (Multi-arch)
-  build-jvm:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux/amd64, linux/arm64]
-        include:
-          - platform: linux/amd64
-            platform-suffix: amd64
-          - platform: linux/arm64
-            platform-suffix: arm64
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-jvm-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-jvm-
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build JVM Application
-        run: |
-          chmod +x mvnw
-          ./mvnw clean package -DskipTests
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and Push JVM Images
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: src/main/docker/Dockerfile.jvm
-          platforms: ${{ matrix.platform }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm-${{ matrix.platform-suffix }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-jvm-${{ matrix.platform-suffix }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-
-  # Job 4: Create multi-arch manifest (chỉ chạy khi CẢ 3 jobs trên thành công)
+  # Job 3: Create multi-arch manifest (chỉ chạy khi CẢ 2 jobs trên thành công)
   create-manifest:
     runs-on: ubuntu-latest
-    needs: [build-amd64, build-arm64, build-jvm]
+    needs: [build-amd64, build-arm64]
     if: success()
 
     steps:
@@ -215,59 +153,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest for Native images
+      - name: Create and push manifest
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           
-          echo "Verifying Native AMD64 image..."
+          # Verify both images exist
+          echo "Verifying AMD64 image..."
           docker manifest inspect $IMAGE:latest-amd64
           
-          echo "Verifying Native ARM64 image..."
+          echo "Verifying ARM64 image..."
           docker manifest inspect $IMAGE:latest-arm64
           
-          # Create manifest for 'latest-native' tag
-          docker buildx imagetools create \
-            --tag $IMAGE:latest-native \
-            $IMAGE:latest-amd64 \
-            $IMAGE:latest-arm64
-          
-          # Create manifest for commit SHA tag with native suffix
-          docker buildx imagetools create \
-            --tag $IMAGE:${{ github.sha }}-native \
-            $IMAGE:${{ github.sha }}-amd64 \
-            $IMAGE:${{ github.sha }}-arm64
-          
-          echo "✅ Native multi-arch manifest created successfully"
-
-      - name: Create and push manifest for JVM images
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          
-          echo "Verifying JVM AMD64 image..."
-          docker manifest inspect $IMAGE:latest-jvm-amd64
-          
-          echo "Verifying JVM ARM64 image..."
-          docker manifest inspect $IMAGE:latest-jvm-arm64
-          
-          # Create manifest for 'latest-jvm' tag
-          docker buildx imagetools create \
-            --tag $IMAGE:latest-jvm \
-            $IMAGE:latest-jvm-amd64 \
-            $IMAGE:latest-jvm-arm64
-          
-          # Create manifest for commit SHA tag with jvm suffix
-          docker buildx imagetools create \
-            --tag $IMAGE:${{ github.sha }}-jvm \
-            $IMAGE:${{ github.sha }}-jvm-amd64 \
-            $IMAGE:${{ github.sha }}-jvm-arm64
-          
-          echo "✅ JVM multi-arch manifest created successfully"
-
-      - name: Create combined manifest (both native and JVM)
-        run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          
-          # Create manifest for 'latest' tag pointing to native (default)
+          # Create manifest for 'latest' tag
           docker buildx imagetools create \
             --tag $IMAGE:latest \
             $IMAGE:latest-amd64 \
@@ -279,27 +176,21 @@ jobs:
             $IMAGE:${{ github.sha }}-amd64 \
             $IMAGE:${{ github.sha }}-arm64
           
-          echo "✅ Combined multi-arch manifest created successfully"
+          echo "✅ Multi-arch manifest created successfully"
           
           # Inspect final manifest
           docker buildx imagetools inspect $IMAGE:latest
 
       - name: Summary
         run: |
-          echo "### 🎉 Multi-arch images published" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎉 Multi-arch image published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Native Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-native\`" >> $GITHUB_STEP_SUMMARY
-          echo "**JVM Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Default (Native)**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms**:" >> $GITHUB_STEP_SUMMARY
           echo "- linux/amd64" >> $GITHUB_STEP_SUMMARY
           echo "- linux/arm64" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tags**:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`latest\` (native)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`latest-native\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`latest-jvm\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ github.sha }}\` (native)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ github.sha }}-native\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ github.sha }}-jvm\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

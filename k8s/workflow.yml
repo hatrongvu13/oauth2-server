@@ -19,6 +19,8 @@ jobs:
   # Job 1: Build AMD64
   build-amd64:
     runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
@@ -31,6 +33,14 @@ jobs:
           java-version: 21
           cache: maven
 
+      - name: Cache Quarkus dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -41,39 +51,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Native Binary (AMD64)
+      - name: Build Quarkus Native Binary (AMD64)
         run: |
+          chmod +x mvnw
           ./mvnw clean package -Pnative \
             -Dquarkus.native.container-build=true \
             -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
+            -Dquarkus.native.additional-build-args="-march=x86-64-v3" \
             -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push AMD64 Image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.native
+          file: src/main/docker/Dockerfile.native-multiarch
           platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-amd64
-          cache-from: type=gha,scope=amd64
-          cache-to: type=gha,mode=max,scope=amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           provenance: false
 
-  # Job 2: Build ARM64 for Pi 4
-  build-arm64-pi4:
-    runs-on: ubuntu-latest
+  # Job 2: Build ARM64
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -81,6 +93,14 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
+
+      - name: Cache Quarkus dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-arm-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-arm-
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -92,44 +112,45 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Native Binary (ARM64 - Pi 4)
+      - name: Build Quarkus Native Binary (ARM64)
         run: |
+          chmod +x mvnw
           ./mvnw clean package -Pnative \
             -Dquarkus.native.container-build=true \
-            -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
-            -Dquarkus.native.container-runtime-options=--platform=linux/arm64 \
+            -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:23.1.9.0-Final-java21-arm64 \
+            -Dquarkus.native.additional-build-args="-H:+UnlockExperimentalVMOptions" \
             -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push ARM64 Pi4 Image
+      - name: Build and Push ARM64 Image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.native
+          file: src/main/docker/Dockerfile.native-multiarch
           platforms: linux/arm64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi4
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
-          cache-from: type=gha,scope=arm64
-          cache-to: type=gha,mode=max,scope=arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           provenance: false
-          labels: |
-            org.opencontainers.image.title=OAuth2 Server ARM64
-            org.opencontainers.image.description=Optimized for Raspberry Pi 4/5
 
-  # Job 3: Build ARM64 for Pi 5 (with specific optimizations)
-  build-arm64-pi5:
+  # Job 3: Build JVM Image (Multi-arch)
+  build-jvm:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+    outputs:
+      image-digest-amd64: ${{ steps.build-amd64.outputs.digest }}
+      image-digest-arm64: ${{ steps.build-arm64.outputs.digest }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -137,6 +158,14 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-jvm-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-jvm-
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -148,36 +177,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Native Binary (ARM64 - Pi 5 optimized)
+      - name: Build JVM Application
         run: |
-          ./mvnw clean package -Pnative \
-            -Dquarkus.native.container-build=true \
-            -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 \
-            -Dquarkus.native.container-runtime-options=--platform=linux/arm64 \
-            -Dquarkus.native.additional-build-args=-march=armv8.2-a \
-            -DskipTests
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push ARM64 Pi5 Image
+      - name: Build and Push JVM Images for all platforms
+        id: build-${{ matrix.platform }}
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.native
-          platforms: linux/arm64
+          file: src/main/docker/Dockerfile.jvm-multiarch
+          platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi5
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi5-${{ github.sha }}
-          cache-from: type=gha,scope=arm64-pi5
-          cache-to: type=gha,mode=max,scope=arm64-pi5
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-jvm-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           provenance: false
-          labels: |
-            org.opencontainers.image.title=OAuth2 Server Pi5
-            org.opencontainers.image.description=Optimized for Raspberry Pi 5 (ARMv8.2-A)
 
-  # Job 4: Create multi-arch manifest
+  # Job 4: Create multi-arch manifest (chỉ chạy khi CẢ 3 jobs trên thành công)
   create-manifest:
     runs-on: ubuntu-latest
-    needs: [build-amd64, build-arm64-pi4]
+    needs: [build-amd64, build-arm64, build-jvm]
     if: success()
 
     steps:
@@ -188,47 +213,91 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create multi-arch manifest
+      - name: Create and push manifest for Native images
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           
-          # Create manifest for 'latest' tag
+          echo "Verifying Native AMD64 image..."
+          docker manifest inspect $IMAGE:latest-amd64
+          
+          echo "Verifying Native ARM64 image..."
+          docker manifest inspect $IMAGE:latest-arm64
+          
+          # Create manifest for 'latest-native' tag
+          docker buildx imagetools create \
+            --tag $IMAGE:latest-native \
+            $IMAGE:latest-amd64 \
+            $IMAGE:latest-arm64
+          
+          # Create manifest for commit SHA tag with native suffix
+          docker buildx imagetools create \
+            --tag $IMAGE:${{ github.sha }}-native \
+            $IMAGE:${{ github.sha }}-amd64 \
+            $IMAGE:${{ github.sha }}-arm64
+          
+          echo "✅ Native multi-arch manifest created successfully"
+
+      - name: Create and push manifest for JVM images
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          
+          echo "Verifying JVM AMD64 image..."
+          docker manifest inspect $IMAGE:latest-jvm-amd64
+          
+          echo "Verifying JVM ARM64 image..."
+          docker manifest inspect $IMAGE:latest-jvm-arm64
+          
+          # Create manifest for 'latest-jvm' tag
+          docker buildx imagetools create \
+            --tag $IMAGE:latest-jvm \
+            $IMAGE:latest-jvm-amd64 \
+            $IMAGE:latest-jvm-arm64
+          
+          # Create manifest for commit SHA tag with jvm suffix
+          docker buildx imagetools create \
+            --tag $IMAGE:${{ github.sha }}-jvm \
+            $IMAGE:${{ github.sha }}-jvm-amd64 \
+            $IMAGE:${{ github.sha }}-jvm-arm64
+          
+          echo "✅ JVM multi-arch manifest created successfully"
+
+      - name: Create combined manifest (both native and JVM)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          
+          # Create manifest for 'latest' tag pointing to native (default)
           docker buildx imagetools create \
             --tag $IMAGE:latest \
             $IMAGE:latest-amd64 \
             $IMAGE:latest-arm64
           
-          # Create manifest for commit SHA
+          # Create manifest for commit SHA tag
           docker buildx imagetools create \
             --tag $IMAGE:${{ github.sha }} \
             $IMAGE:${{ github.sha }}-amd64 \
             $IMAGE:${{ github.sha }}-arm64
           
-          echo "✅ Multi-arch manifest created"
+          echo "✅ Combined multi-arch manifest created successfully"
+          
+          # Inspect final manifest
           docker buildx imagetools inspect $IMAGE:latest
 
       - name: Summary
         run: |
-          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
-          ### 🎉 Multi-arch Native Images Published
-          
-          | Tag | Platforms | Optimized For |
-          |-----|-----------|---------------|
-          | `latest` | amd64, arm64 | General use |
-          | `latest-amd64` | amd64 | x86-64 |
-          | `latest-arm64` | arm64 | ARMv8-A (Pi 4 compatible) |
-          | `pi4` | arm64 | Raspberry Pi 4 |
-          | `pi5` | arm64 | Raspberry Pi 5 (ARMv8.2-A) |
-          
-          #### Pull Commands:
-          ```bash
-          # Auto-detect platform
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          
-          # Raspberry Pi 4
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi4
-          
-          # Raspberry Pi 5 (optimized)
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pi5
-          ```
-          EOF
+          echo "### 🎉 Multi-arch images published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Native Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-native\`" >> $GITHUB_STEP_SUMMARY
+          echo "**JVM Image**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Default (Native)**: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms**:" >> $GITHUB_STEP_SUMMARY
+          echo "- linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags**:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`latest\` (native)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`latest-native\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`latest-jvm\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.sha }}\` (native)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.sha }}-native\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.sha }}-jvm\`" >> $GITHUB_STEP_SUMMARY
