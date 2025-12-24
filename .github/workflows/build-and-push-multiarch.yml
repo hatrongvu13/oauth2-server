@@ -123,7 +123,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Build and Push ARM64 Image
         id: build
         uses: docker/build-push-action@v6
@@ -145,9 +144,11 @@ jobs:
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64]
-    outputs:
-      image-digest-amd64: ${{ steps.build-amd64.outputs.digest }}
-      image-digest-arm64: ${{ steps.build-arm64.outputs.digest }}
+        include:
+          - platform: linux/amd64
+            platform-suffix: amd64
+          - platform: linux/arm64
+            platform-suffix: arm64
 
     steps:
       - name: Checkout
@@ -185,17 +186,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push JVM Images for all platforms
-        id: build-${{ matrix.platform }}
+      - name: Build and Push JVM Images
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.jvm
+          file: src/main/docker/Dockerfile.jvm-multiarch
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-jvm-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-jvm-${{ matrix.platform-suffix }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-jvm-${{ matrix.platform-suffix }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
