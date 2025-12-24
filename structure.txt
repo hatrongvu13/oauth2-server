@@ -1,0 +1,209 @@
+.
+├── README-NATIVE.md
+├── README.md
+├── SECURITY.md
+├── SETUP_GUIDE.md
+├── k8s
+│  ├── deployment.yaml
+│  └── workflow.yml
+├── mvnw
+├── mvnw.cmd
+├── pom.xml
+├── scripts
+│  ├── benchmark.sh
+│  ├── build-docker.sh
+│  ├── build-multiarch.sh
+│  ├── build-native.sh
+│  ├── genEdcsa.sh
+│  ├── genRsaKey.sh
+│  └── send-telegram-notification.sh
+├── src
+│  ├── main
+│  │  ├── docker
+│  │  │  ├── Dockerfile
+│  │  │  ├── Dockerfile.jvm
+│  │  │  ├── Dockerfile.legacy-jar
+│  │  │  ├── Dockerfile.native
+│  │  │  ├── Dockerfile.native-micro
+│  │  │  ├── Dockerfile.native-multiarch
+│  │  │  └── docker-compose.yaml
+│  │  ├── java
+│  │  │  └── com
+│  │  │      └── htv
+│  │  │          └── oauth2
+│  │  │              ├── cache
+│  │  │              │  ├── AuthorizationCodeCache.java
+│  │  │              │  ├── ClientCache.java
+│  │  │              │  ├── RateLimitCache.java
+│  │  │              │  ├── SessionCache.java
+│  │  │              │  ├── TokenCache.java
+│  │  │              │  └── UserCache.java
+│  │  │              ├── config
+│  │  │              │  ├── ApplicationConfig.java
+│  │  │              │  ├── CorsFilter.java
+│  │  │              │  ├── DatabaseConfig.java
+│  │  │              │  ├── JacksonConfig.java
+│  │  │              │  ├── JwtConfig.java
+│  │  │              │  ├── Logged.java
+│  │  │              │  ├── LoggingInterceptor.java
+│  │  │              │  └── RedisProducerConfig.java
+│  │  │              ├── domain
+│  │  │              │  ├── AccessToken.java
+│  │  │              │  ├── AuditLog.java
+│  │  │              │  ├── AuthorizationCode.java
+│  │  │              │  ├── Client.java
+│  │  │              │  ├── MfaConfig.java
+│  │  │              │  ├── RefreshToken.java
+│  │  │              │  ├── User.java
+│  │  │              │  └── UserConsent.java
+│  │  │              ├── dto
+│  │  │              │  ├── auth
+│  │  │              │  │  ├── AuthorizationRequest.java
+│  │  │              │  │  ├── ConsentRequest.java
+│  │  │              │  │  ├── LoginRequest.java
+│  │  │              │  │  ├── PasswordChangeRequest.java
+│  │  │              │  │  └── PasswordResetRequest.java
+│  │  │              │  ├── ratelimit
+│  │  │              │  │  └── RateLimitResult.java
+│  │  │              │  ├── request
+│  │  │              │  │  ├── client
+│  │  │              │  │  │  ├── ClientRegistrationRequest.java
+│  │  │              │  │  │  ├── ClientSecretResetRequest.java
+│  │  │              │  │  │  └── ClientUpdateRequest.java
+│  │  │              │  │  ├── mfa
+│  │  │              │  │  │  ├── DisableMfaRequest.java
+│  │  │              │  │  │  ├── EnableMfaRequest.java
+│  │  │              │  │  │  └── MfaVerifyRequest.java
+│  │  │              │  │  ├── token
+│  │  │              │  │  │  ├── TokenIntrospectionRequest.java
+│  │  │              │  │  │  ├── TokenRequest.java
+│  │  │              │  │  │  └── TokenRevocationRequest.java
+│  │  │              │  │  └── user
+│  │  │              │  │      ├── RegisterRequest.java
+│  │  │              │  │      └── UserUpdateRequest.java
+│  │  │              │  └── response
+│  │  │              │      ├── AuditLogResponse.java
+│  │  │              │      ├── AuthorizationResponse.java
+│  │  │              │      ├── ClientListResponse.java
+│  │  │              │      ├── ClientResponse.java
+│  │  │              │      ├── ConsentResponse.java
+│  │  │              │      ├── ErrorResponse.java
+│  │  │              │      ├── LoginResponse.java
+│  │  │              │      ├── MfaSetupResponse.java
+│  │  │              │      ├── PageResponse.java
+│  │  │              │      ├── RegisterResponse.java
+│  │  │              │      ├── SuccessResponse.java
+│  │  │              │      ├── TokenIntrospectionResponse.java
+│  │  │              │      ├── TokenResponse.java
+│  │  │              │      └── UserResponse.java
+│  │  │              ├── exception
+│  │  │              │  ├── ApplicationException.java
+│  │  │              │  ├── ErrorCode.java
+│  │  │              │  └── GlobalExceptionHandler.java
+│  │  │              ├── filter
+│  │  │              │  └── RateLimitFilter.java
+│  │  │              ├── mapper
+│  │  │              │  ├── AuditLogMapper.java
+│  │  │              │  ├── AuthorizationCodeMapper.java
+│  │  │              │  ├── ClientMapper.java
+│  │  │              │  ├── TokenMapper.java
+│  │  │              │  └── UserMapper.java
+│  │  │              ├── repository
+│  │  │              │  ├── AccessTokenRepository.java
+│  │  │              │  ├── AuditLogRepository.java
+│  │  │              │  ├── AuthorizationCodeRepository.java
+│  │  │              │  ├── ClientRepository.java
+│  │  │              │  ├── MfaConfigRepository.java
+│  │  │              │  ├── RefreshTokenRepository.java
+│  │  │              │  ├── UserConsentRepository.java
+│  │  │              │  └── UserRepository.java
+│  │  │              ├── resource
+│  │  │              │  ├── AuthResource.java
+│  │  │              │  ├── AuthorizeResource.java
+│  │  │              │  ├── ClientResource.java
+│  │  │              │  ├── IntrospectionResource.java
+│  │  │              │  ├── RevocationResource.java
+│  │  │              │  ├── TokenResource.java
+│  │  │              │  └── UserResource.java
+│  │  │              ├── scheduler
+│  │  │              │  ├── AuditLogCleanupScheduler.java
+│  │  │              │  └── TokenCleanupScheduler.java
+│  │  │              ├── security
+│  │  │              │  ├── SessionManager.java
+│  │  │              │  └── UserContextProvider.java
+│  │  │              ├── service
+│  │  │              │  ├── AuditService.java
+│  │  │              │  ├── RateLimitService.java
+│  │  │              │  ├── auth
+│  │  │              │  │  ├── AuthenticationService.java
+│  │  │              │  │  └── AuthorizationService.java
+│  │  │              │  ├── cache
+│  │  │              │  │  └── CacheService.java
+│  │  │              │  ├── client
+│  │  │              │  │  └── ClientService.java
+│  │  │              │  ├── email
+│  │  │              │  │  └── EmailService.java
+│  │  │              │  ├── i18n
+│  │  │              │  │  └── MessageService.java
+│  │  │              │  ├── mfa
+│  │  │              │  │  └── MfaService.java
+│  │  │              │  ├── ratelimit
+│  │  │              │  │  ├── AbstractRateLimitService.java
+│  │  │              │  │  ├── EmailRateLimitService.java
+│  │  │              │  │  ├── LoginRateLimitService.java
+│  │  │              │  │  └── MfaRateLimitService.java
+│  │  │              │  ├── security
+│  │  │              │  │  └── PasswordService.java
+│  │  │              │  ├── token
+│  │  │              │  │  └── TokenService.java
+│  │  │              │  └── user
+│  │  │              │      └── UserService.java
+│  │  │              └── util
+│  │  │                  ├── CryptoUtil.java
+│  │  │                  ├── DateTimeUtil.java
+│  │  │                  ├── GenerateKeys.java
+│  │  │                  ├── HttpUtil.java
+│  │  │                  ├── JwtUtil.java
+│  │  │                  ├── StringUtil.java
+│  │  │                  └── ValidationUtil.java
+│  │  └── resources
+│  │      ├── META-INF
+│  │      │  ├── beans.xml
+│  │      │  └── native-image
+│  │      │      ├── jni-config.json
+│  │      │      ├── native-image.properties
+│  │      │      ├── proxy-config.json
+│  │      │      ├── reflect-config.json
+│  │      │      └── resource-config.json
+│  │      ├── application.yml
+│  │      ├── db
+│  │      │  └── migration
+│  │      │      ├── V1__create_users_table.sql
+│  │      │      ├── V2__create_clients_table.sql
+│  │      │      ├── V3__create_tokens_table.sql
+│  │      │      ├── V4__create_audit_logs_table.sql
+│  │      │      ├── V5__create_user_consents_table.sql
+│  │      │      ├── V6__insert_default_data.sql
+│  │      │      ├── V7__add_mfa_backup_codes.sql
+│  │      │      └── V8__migrate_mfa_to_separate_table.sql
+│  │      ├── keys
+│  │      │  ├── private_key.pem
+│  │      │  └── public_key.pem
+│  │      ├── messages.properties
+│  │      ├── messages_vi.properties
+│  │      └── templates
+│  │          ├── emails
+│  │          │  ├── backup-codes.html
+│  │          │  ├── login-notification.html
+│  │          │  ├── mfa-setup.html
+│  │          │  └── password-reset.html
+│  │          └── notification.html
+│  └── test
+│      └── java
+│          └── com
+│              └── htv
+│                  └── oauth2
+│                      └── service
+└── structure.txt
+
+55 directories, 152 files

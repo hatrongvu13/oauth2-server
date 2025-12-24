@@ -2,10 +2,8 @@ package com.htv.oauth2.resource;
 
 import com.htv.oauth2.dto.request.user.RegisterRequest;
 import com.htv.oauth2.dto.request.user.UserUpdateRequest;
-import com.htv.oauth2.dto.response.ErrorResponse;
 import com.htv.oauth2.dto.response.RegisterResponse;
 import com.htv.oauth2.dto.response.UserResponse;
-import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
@@ -34,18 +32,8 @@ public class UserResource {
     @Path("/register")
     @PermitAll
     public Response register(@Valid RegisterRequest request) {
-        try {
-            RegisterResponse user = userService.registerUser(request);
-            return Response.status(Response.Status.CREATED)
-                    .entity(user)
-                    .build();
-        } catch (OAuth2Exception e) {
-            ErrorResponse error = ErrorResponse.builder()
-                    .error(e.getError())
-                    .errorDescription(e.getErrorDescription())
-                    .build();
-            return Response.status(e.getHttpStatus()).entity(error).build();
-        }
+        RegisterResponse user = userService.registerUser(request);
+        return Response.status(Response.Status.CREATED).entity(user).build();
     }
 
     /**

@@ -6,9 +6,8 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.htv.oauth2.domain.MfaConfig;
-import com.htv.oauth2.exception.core.CacheException;
-import com.htv.oauth2.exception.auth.mfa.ExpiredMfaTokenException;
-import com.htv.oauth2.exception.resource.ResourceNotFoundException;
+import com.htv.oauth2.exception.ApplicationException;
+import com.htv.oauth2.exception.ErrorCode;
 import com.htv.oauth2.repository.MfaConfigRepository;
 import com.htv.oauth2.service.cache.CacheService;
 import com.htv.oauth2.util.CryptoUtil;
@@ -243,15 +242,15 @@ public class MfaService {
     public String getUserIdFromMfaToken(String mfaToken) {
         if (cacheService.exists(mfaToken)) {
             return cacheService.get(mfaToken)
-                    .orElseThrow(() -> new CacheException("Error when get user info from mfa token. Please try again!"));
+                    .orElseThrow(() -> new ApplicationException(ErrorCode.CACHE_ERROR, "Error when get user info from mfa token. Please try again!"));
         }
-        throw new ExpiredMfaTokenException("Mfa Token is expired. Please login again!");
+        throw new ApplicationException(ErrorCode.EXPIRED_MFA_TOKEN ,"Mfa Token is expired. Please login again!");
     }
 
     private MfaConfig getMfaConfigOrThrow(String userId) {
         MfaConfig mfaConfig = mfaConfigRepository.findByUserId(userId);
         if (Objects.isNull(mfaConfig)) {
-            throw new ResourceNotFoundException(MfaConfig.class.getSimpleName(), "Not found with user " + userId);
+            throw new ApplicationException(ErrorCode.RESOURCE_NOT_FOUND, MfaConfig.class.getSimpleName(), "Not found with user " + userId);
         }
         return mfaConfig;
     }

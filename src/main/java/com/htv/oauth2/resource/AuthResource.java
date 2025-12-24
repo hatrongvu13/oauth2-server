@@ -6,9 +6,6 @@ import com.htv.oauth2.dto.request.mfa.EnableMfaRequest;
 import com.htv.oauth2.dto.auth.LoginRequest;
 import com.htv.oauth2.dto.request.mfa.MfaVerifyRequest;
 import com.htv.oauth2.dto.response.*;
-import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
-import com.htv.oauth2.exception.auth.mfa.MfaRequiredException;
-import com.htv.oauth2.exception.resource.ResourceNotFoundException;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.service.auth.AuthenticationService;
 import com.htv.oauth2.service.mfa.MfaService;
@@ -30,8 +27,6 @@ import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
-import java.time.Instant;
-import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -57,38 +52,6 @@ public class AuthResource {
     @Inject
     UserMapper userMapper;
 
-    private Response buildErrorResponse(OAuth2Exception e, Response.Status defaultStatus) {
-
-        Map<String, Object> info = null;
-
-        if (e instanceof MfaRequiredException) {
-            info = Map.of("mfa_token", ((MfaRequiredException) e).getMfaToken());
-        } else if (e.getAdditionalInfo() != null) {
-            info = Map.of("additional_data", e.getAdditionalInfo());
-        }
-
-        ErrorResponse error = ErrorResponse.builder()
-                .error(e.getError())
-                .errorDescription(e.getErrorDescription())
-                .status(e.getHttpStatus())
-                .timestamp(Instant.now())
-                .additionalInfo(info)
-                .build();
-
-        return Response.status(e.getHttpStatus()).entity(error).build();
-    }
-
-    private Response buildInternalServerError(Exception e) {
-        log.error("Unexpected error occurred: ", e);
-        ErrorResponse error = ErrorResponse.builder()
-                .error("internal_server_error")
-                .errorDescription("An unexpected error occurred. Please contact support.")
-                .status(500)
-                .timestamp(Instant.now())
-                .build();
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(error).build();
-    }
-
 
     /**
      * Authenticate user (login)
@@ -105,49 +68,33 @@ public class AuthResource {
         String ipAddress = routingContext.request().remoteAddress().hostAddress();
         String userAgent = headers.getHeaderString(HttpHeaders.USER_AGENT);
 
-        try {
-            // 1. Xác thực người dùng (truyền thêm IP và User Agent)
-            User authenticatedUser = authService.authenticateUser(request, ipAddress, userAgent);
+        // 1. Xác thực người dùng (truyền thêm IP và User Agent)
+        User authenticatedUser = authService.authenticateUser(request, ipAddress, userAgent);
 
-            // --- GIẢ ĐỊNH LOGIC XÁC ĐỊNH CLIENT VÀ SCOPE ---
-            // Giả định Client và Scopes Mặc định
-            Client defaultClient = createDefaultClient();
-            Set<String> defaultScopes = Set.of("profile", "email");
+        // --- GIẢ ĐỊNH LOGIC XÁC ĐỊNH CLIENT VÀ SCOPE ---
+        // Giả định Client và Scopes Mặc định
+        Client defaultClient = createDefaultClient();
+        Set<String> defaultScopes = Set.of("profile", "email");
 
-            // 2. Generate Tokens
-            TokenResponse tokenResponse = tokenService.generateTokens(
-                    authenticatedUser, defaultClient, defaultScopes
-            );
+        // 2. Generate Tokens
+        TokenResponse tokenResponse = tokenService.generateTokens(
+                authenticatedUser, defaultClient, defaultScopes
+        );
 
-            // 3. Map TokenResponse và User thành LoginResponse
-            LoginResponse response = LoginResponse.builder()
-                    .accessToken(tokenResponse.getAccessToken())
-                    .refreshToken(tokenResponse.getRefreshToken())
-                    .tokenType(tokenResponse.getTokenType())
-                    .expiresIn(tokenResponse.getExpiresIn())
-                    .scope(tokenResponse.getScope())
-                    .mfaRequired(false)
-                    .user(userMapper.toResponse(authenticatedUser))
-                    .build();
+        // 3. Map TokenResponse và User thành LoginResponse
+        LoginResponse response = LoginResponse.builder()
+                .accessToken(tokenResponse.getAccessToken())
+                .refreshToken(tokenResponse.getRefreshToken())
+                .tokenType(tokenResponse.getTokenType())
+                .expiresIn(tokenResponse.getExpiresIn())
+                .scope(tokenResponse.getScope())
+                .mfaRequired(false)
+                .user(userMapper.toResponse(authenticatedUser))
+                .build();
 
-            log.info("User {} logged in successfully.", authenticatedUser.getUsername());
+        log.info("User {} logged in successfully.", authenticatedUser.getUsername());
 
-            return Response.ok(response).build();
-
-        } catch (MfaRequiredException e) {
-            // Xử lý trường hợp cần MFA (Trả về 401 Unauthorized và mfa_token)
-            log.warn("Login requires MFA for user {}. Token: {}", request.getUsername(), e.getAdditionalInfo());
-            return buildErrorResponse(e, Response.Status.UNAUTHORIZED); // Sử dụng hàm tiện ích
-
-        } catch (OAuth2Exception e) {
-            // Xử lý các Exception nghiệp vụ khác (InvalidCredentials, RateLimitExceeded, AccountLocked, v.v.)
-            log.warn("Login failed for user {}. Error: {}", request.getUsername(), e.getErrorDescription());
-            return buildErrorResponse(e, Response.Status.BAD_REQUEST);
-
-        } catch (Exception e) {
-            // Xử lý lỗi hệ thống 500
-            return buildInternalServerError(e);
-        }
+        return Response.ok(response).build();
     }
 
     /**
@@ -165,49 +112,40 @@ public class AuthResource {
         String ipAddress = routingContext.request().remoteAddress().hostAddress();
         String userAgent = headers.getHeaderString(HttpHeaders.USER_AGENT);
 
-        try {
-            // 1. Xác thực MFA session token và code
-            User authenticatedUser = authService.verifyMfaSession(
-                    mfaService.getUserIdFromMfaToken(request.getMfaToken()),
-                    request.getMfaCode(),
-                    ipAddress,
-                    userAgent
-            );
+        // 1. Xác thực MFA session token và code
+        User authenticatedUser = authService.verifyMfaSession(
+                mfaService.getUserIdFromMfaToken(request.getMfaToken()),
+                request.getMfaCode(),
+                ipAddress,
+                userAgent
+        );
 
-            // --- LOGIC TẠO TOKEN TƯƠNG TỰ LOGIN ---
-            Client defaultClient = new Client();
-            defaultClient.setClientId("default-client-id");
-            defaultClient.setAccessTokenValidity(3600);
-            defaultClient.setRefreshTokenValidity(7200);
-            Set<String> defaultScopes = Set.of("profile", "email");
+        // --- LOGIC TẠO TOKEN TƯƠNG TỰ LOGIN ---
+        Client defaultClient = new Client();
+        defaultClient.setClientId("default-client-id");
+        defaultClient.setAccessTokenValidity(3600);
+        defaultClient.setRefreshTokenValidity(7200);
+        Set<String> defaultScopes = Set.of("profile", "email");
 
-            // 2. Generate Tokens
-            TokenResponse tokenResponse = tokenService.generateTokens(
-                    authenticatedUser, defaultClient, defaultScopes
-            );
+        // 2. Generate Tokens
+        TokenResponse tokenResponse = tokenService.generateTokens(
+                authenticatedUser, defaultClient, defaultScopes
+        );
 
-            // 3. Map TokenResponse và User thành LoginResponse
-            LoginResponse response = LoginResponse.builder()
-                    .accessToken(tokenResponse.getAccessToken())
-                    .refreshToken(tokenResponse.getRefreshToken())
-                    .tokenType(tokenResponse.getTokenType())
-                    .expiresIn(tokenResponse.getExpiresIn())
-                    .scope(tokenResponse.getScope())
-                    .mfaRequired(false)
-                    .user(userMapper.toResponse(authenticatedUser))
-                    .build();
+        // 3. Map TokenResponse và User thành LoginResponse
+        LoginResponse response = LoginResponse.builder()
+                .accessToken(tokenResponse.getAccessToken())
+                .refreshToken(tokenResponse.getRefreshToken())
+                .tokenType(tokenResponse.getTokenType())
+                .expiresIn(tokenResponse.getExpiresIn())
+                .scope(tokenResponse.getScope())
+                .mfaRequired(false)
+                .user(userMapper.toResponse(authenticatedUser))
+                .build();
 
-            log.info("User {} successfully completed MFA.", authenticatedUser.getUsername());
+        log.info("User {} successfully completed MFA.", authenticatedUser.getUsername());
 
-            return Response.ok(response).build();
-
-        } catch (OAuth2Exception e) {
-            // Xử lý InvalidMfaCodeException, InvalidTokenException
-            log.warn("MFA verification failed. Error: {}", e.getErrorDescription());
-            return buildErrorResponse(e, Response.Status.UNAUTHORIZED);
-        } catch (Exception e) {
-            return buildInternalServerError(e);
-        }
+        return Response.ok(response).build();
     }
 
     @POST
@@ -222,25 +160,18 @@ public class AuthResource {
     // Tạm thời, đặt PermitAll để cho phép truy cập sau đăng ký nếu bạn không yêu cầu login ngay.
     @Authenticated
     public Response enableMfa(@Valid EnableMfaRequest request) {
-        try {
-            // Lấy người dùng hiện tại (Giả định Auth mechanism đã xác thực UserID và đặt vào UserContext)
-            String userId = jwt.getSubject();
+        // Lấy người dùng hiện tại (Giả định Auth mechanism đã xác thực UserID và đặt vào UserContext)
+        String userId = jwt.getSubject();
 
-            if (userId == null) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
-
-            // 2. Kích hoạt MFA chính thức và xóa mã MFA tạm thời khỏi bộ nhớ/DB
-            userService.enableMfa(userId, request);
-
-            log.info("MFA successfully enabled for user {}", userId);
-            return Response.ok(SuccessResponse.of("MFA successfully enabled.")).build();
-
-        } catch (OAuth2Exception e) {
-            return buildErrorResponse(e, Response.Status.BAD_REQUEST);
-        } catch (Exception e) {
-            return buildInternalServerError(e);
+        if (userId == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
         }
+
+        // 2. Kích hoạt MFA chính thức và xóa mã MFA tạm thời khỏi bộ nhớ/DB
+        userService.enableMfa(userId, request);
+
+        log.info("MFA successfully enabled for user {}", userId);
+        return Response.ok(SuccessResponse.of("MFA successfully enabled.")).build();
     }
 
     /**
@@ -251,32 +182,23 @@ public class AuthResource {
     @Path("/mfa/disable")
     @Authenticated
     public Response disableMfa() {
-        try {
-            // 1. Lấy userId từ JWT Subject
-            String userId = jwt.getSubject();
+        // 1. Lấy userId từ JWT Subject
+        String userId = jwt.getSubject();
 
-            if (userId == null) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
-
-            log.info("Request to disable MFA for user: {}", userId);
-
-            // 2. Gọi MfaService để xóa cấu hình MFA (Secret key, backup codes)
-            mfaService.disableMfa(userId);
-
-            // 3. Cập nhật trạng thái mfaEnabled = false trong bảng User thông qua UserService
-            userService.disableMfa(userId);
-
-            log.info("MFA successfully disabled for user {}", userId);
-            return Response.ok(SuccessResponse.of("MFA has been successfully disabled.")).build();
-
-        } catch (ResourceNotFoundException e) {
-            return buildErrorResponse(e, Response.Status.NOT_FOUND);
-        } catch (OAuth2Exception e) {
-            return buildErrorResponse(e, Response.Status.BAD_REQUEST);
-        } catch (Exception e) {
-            return buildInternalServerError(e);
+        if (userId == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
         }
+
+        log.info("Request to disable MFA for user: {}", userId);
+
+        // 2. Gọi MfaService để xóa cấu hình MFA (Secret key, backup codes)
+        mfaService.disableMfa(userId);
+
+        // 3. Cập nhật trạng thái mfaEnabled = false trong bảng User thông qua UserService
+        userService.disableMfa(userId);
+
+        log.info("MFA successfully disabled for user {}", userId);
+        return Response.ok(SuccessResponse.of("MFA has been successfully disabled.")).build();
     }
 
     private Client createDefaultClient() {

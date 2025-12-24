@@ -2,8 +2,6 @@ package com.htv.oauth2.resource;
 
 import com.htv.oauth2.dto.request.client.ClientRegistrationRequest;
 import com.htv.oauth2.dto.response.ClientResponse;
-import com.htv.oauth2.dto.response.ErrorResponse;
-import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import com.htv.oauth2.service.client.ClientService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -27,18 +25,10 @@ public class ClientResource {
      */
     @POST
     public Response register(@Valid ClientRegistrationRequest request) {
-        try {
-            ClientResponse client = clientService.registerClient(request);
-            return Response.status(Response.Status.CREATED)
-                    .entity(client)
-                    .build();
-        } catch (OAuth2Exception e) {
-            ErrorResponse error = ErrorResponse.builder()
-                    .error(e.getError())
-                    .errorDescription(e.getErrorDescription())
-                    .build();
-            return Response.status(e.getHttpStatus()).entity(error).build();
-        }
+        ClientResponse client = clientService.registerClient(request);
+        return Response.status(Response.Status.CREATED)
+                .entity(client)
+                .build();
     }
 
     /**
@@ -48,16 +38,8 @@ public class ClientResource {
     @GET
     @Path("/{clientId}")
     public Response getClient(@PathParam("clientId") String clientId) {
-        try {
-            ClientResponse client = clientService.findByClientId(clientId);
-            return Response.ok(client).build();
-        } catch (OAuth2Exception e) {
-            ErrorResponse error = ErrorResponse.builder()
-                    .error(e.getError())
-                    .errorDescription(e.getErrorDescription())
-                    .build();
-            return Response.status(e.getHttpStatus()).entity(error).build();
-        }
+        ClientResponse client = clientService.findByClientId(clientId);
+        return Response.ok(client).build();
     }
 
     /**

@@ -1,7 +1,6 @@
 package com.htv.oauth2.resource;
 
 import com.htv.oauth2.dto.response.ErrorResponse;
-import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import com.htv.oauth2.service.client.ClientService;
 import com.htv.oauth2.service.token.TokenService;
 import jakarta.annotation.security.PermitAll;
@@ -35,25 +34,16 @@ public class RevocationResource {
             @FormParam("client_id") String clientId,
             @FormParam("client_secret") String clientSecret) {
 
-        try {
-            // Validate client
-            clientService.validateClientCredentials(clientId, clientSecret);
+        // Validate client
+        clientService.validateClientCredentials(clientId, clientSecret);
 
-            if (token == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorResponse.invalidRequest("Missing token parameter"))
-                        .build();
-            }
-
-            tokenService.revokeToken(token);
-            return Response.ok().build();
-
-        } catch (OAuth2Exception e) {
-            ErrorResponse error = ErrorResponse.builder()
-                    .error(e.getError())
-                    .errorDescription(e.getErrorDescription())
+        if (token == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(ErrorResponse.invalidRequest("Missing token parameter"))
                     .build();
-            return Response.status(e.getHttpStatus()).entity(error).build();
         }
+
+        tokenService.revokeToken(token);
+        return Response.ok().build();
     }
 }

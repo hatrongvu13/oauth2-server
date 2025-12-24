@@ -5,9 +5,8 @@ import com.htv.oauth2.domain.Client;
 import com.htv.oauth2.domain.User;
 import com.htv.oauth2.dto.response.ErrorResponse;
 import com.htv.oauth2.dto.response.TokenResponse;
-import com.htv.oauth2.exception.auth.oauth2.InvalidRequestException;
-import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
-import com.htv.oauth2.exception.auth.oauth2.UnsupportedGrantTypeException;
+import com.htv.oauth2.exception.ApplicationException;
+import com.htv.oauth2.exception.ErrorCode;
 import com.htv.oauth2.service.auth.AuthenticationService;
 import com.htv.oauth2.service.auth.AuthorizationService;
 import com.htv.oauth2.service.client.ClientService;
@@ -62,54 +61,44 @@ public class TokenResource {
             @FormParam("code_verifier") String codeVerifier,
             @Context HttpHeaders headers) {
 
-        try {
-            // Validate grant type
-            if (!ValidationUtil.isValidGrantType(grantType)) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorResponse.unsupportedGrantType("Invalid grant type"))
-                        .build();
-            }
-
-            // Extract client credentials from Basic Auth if not in form
-            if (clientId == null && clientSecret == null) {
-                String authHeader = headers.getHeaderString("Authorization");
-                if (authHeader != null && authHeader.startsWith("Basic ")) {
-                    // Parse Basic Auth (implement decoding)
-                    // clientId = ...; clientSecret = ...;
-                }
-            }
-
-            // Validate client
-            Client client = clientService.validateClientCredentials(clientId, clientSecret);
-
-            // Handle different grant types
-            TokenResponse response = switch (grantType) {
-                case "authorization_code" -> handleAuthorizationCodeGrant(
-                        code, redirectUri, client, codeVerifier
-                );
-                case "refresh_token" -> handleRefreshTokenGrant(refreshToken, client);
-                case "password" -> handlePasswordGrant(username, password, client, scope);
-                case "client_credentials" -> handleClientCredentialsGrant(client, scope);
-                default -> throw new UnsupportedGrantTypeException(grantType);
-            };
-
-            return Response.ok(response).build();
-
-        } catch (OAuth2Exception e) {
-            log.error("Token error: {}", e.getMessage(), e);
-            ErrorResponse error = ErrorResponse.builder()
-                    .error(e.getError())
-                    .errorDescription(e.getErrorDescription())
+        // Validate grant type
+        if (!ValidationUtil.isValidGrantType(grantType)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(ErrorResponse.unsupportedGrantType("Invalid grant type"))
                     .build();
-            return Response.status(e.getHttpStatus()).entity(error).build();
         }
+
+        // Extract client credentials from Basic Auth if not in form
+        if (clientId == null && clientSecret == null) {
+            String authHeader = headers.getHeaderString("Authorization");
+            if (authHeader != null && authHeader.startsWith("Basic ")) {
+                // Parse Basic Auth (implement decoding)
+                // clientId = ...; clientSecret = ...;
+            }
+        }
+
+        // Validate client
+        Client client = clientService.validateClientCredentials(clientId, clientSecret);
+
+        // Handle different grant types
+        TokenResponse response = switch (grantType) {
+            case "authorization_code" -> handleAuthorizationCodeGrant(
+                    code, redirectUri, client, codeVerifier
+            );
+            case "refresh_token" -> handleRefreshTokenGrant(refreshToken, client);
+            case "password" -> handlePasswordGrant(username, password, client, scope);
+            case "client_credentials" -> handleClientCredentialsGrant(client, scope);
+            default -> throw new ApplicationException(ErrorCode.UNSUPPORTED_GRANT_TYPE, grantType);
+        };
+
+        return Response.ok(response).build();
     }
 
     private TokenResponse handleAuthorizationCodeGrant(
             String code, String redirectUri, Client client, String codeVerifier) {
 
         if (code == null || redirectUri == null) {
-            throw new InvalidRequestException("Missing code or redirect_uri");
+            throw new ApplicationException(ErrorCode.INVALID_REQUEST, "Missing code or redirect_uri");
         }
 
         // Validate and consume authorization code
@@ -127,7 +116,7 @@ public class TokenResource {
 
     private TokenResponse handleRefreshTokenGrant(String refreshToken, Client client) {
         if (refreshToken == null) {
-            throw new InvalidRequestException("Missing refresh_token");
+            throw new ApplicationException(ErrorCode.INVALID_REQUEST, "Missing refresh_token");
         }
 
         return tokenService.refreshToken(refreshToken, client);
@@ -137,7 +126,7 @@ public class TokenResource {
             String username, String password, Client client, String scope) {
 
         if (username == null || password == null) {
-            throw new InvalidRequestException("Missing username or password");
+            throw new ApplicationException(ErrorCode.INVALID_REQUEST, "Missing username or password");
         }
 
         // Validate credentials

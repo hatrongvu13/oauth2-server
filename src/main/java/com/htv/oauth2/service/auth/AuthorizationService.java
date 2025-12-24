@@ -3,12 +3,8 @@ package com.htv.oauth2.service.auth;
 import com.htv.oauth2.domain.*;
 import com.htv.oauth2.dto.auth.AuthorizationRequest;
 import com.htv.oauth2.dto.response.AuthorizationResponse;
-import com.htv.oauth2.exception.auth.oauth2.CodeChallengeMismatchException;
-import com.htv.oauth2.exception.auth.oauth2.InvalidClientException;
-import com.htv.oauth2.exception.auth.oauth2.InvalidCodeVerifierException;
-import com.htv.oauth2.exception.auth.oauth2.UnsupportedResponseTypeException;
-import com.htv.oauth2.exception.auth.token.ExpiredAuthorizationCodeException;
-import com.htv.oauth2.exception.auth.token.InvalidAuthorizationCodeException;
+import com.htv.oauth2.exception.ApplicationException;
+import com.htv.oauth2.exception.ErrorCode;
 import com.htv.oauth2.repository.*;
 import com.htv.oauth2.service.client.ClientService;
 import com.htv.oauth2.util.CryptoUtil;
@@ -55,15 +51,15 @@ public class AuthorizationService {
 
         // Validate response type
         if (!"code".equals(request.getResponseType())) {
-            throw new UnsupportedResponseTypeException(request.getResponseType());
+            throw new ApplicationException(ErrorCode.UNSUPPORTED_RESPONSE_TYPE, request.getResponseType());
         }
 
         // Find and validate client
         Client client = clientRepository.findByClientId(request.getClientId())
-                .orElseThrow(() -> new InvalidClientException("Client not found"));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.INVALID_CLIENT, "Client not found"));
 
         if (!client.getEnabled()) {
-            throw new InvalidClientException("Client is disabled");
+            throw new ApplicationException(ErrorCode.INVALID_CLIENT, "Client is disabled");
         }
 
         // Validate redirect URI
@@ -74,7 +70,7 @@ public class AuthorizationService {
 
         // Validate scopes
         if (!ValidationUtil.areScopesAllowed(approvedScopes, client.getScopes())) {
-            throw new InvalidCodeVerifierException.InvalidScopeException("Requested scopes not allowed for this client");
+            throw new ApplicationException(ErrorCode.INVALID_SCOPE ,"Requested scopes not allowed for this client");
         }
 
         // Generate authorization code
@@ -122,39 +118,39 @@ public class AuthorizationService {
 
         // Find authorization code
         AuthorizationCode authCode = authCodeRepository.findByCode(code)
-                .orElseThrow(() -> new InvalidAuthorizationCodeException("Authorization code not found"));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.INVALID_AUTHORIZATION_CODE, "Authorization code not found"));
 
         // Validate not used
         if (authCode.getUsed()) {
-            throw new InvalidAuthorizationCodeException("Authorization code already used");
+            throw new ApplicationException(ErrorCode.INVALID_AUTHORIZATION_CODE, "Authorization code already used");
         }
 
         // Validate not expired
         if (authCode.isExpired()) {
-            throw new ExpiredAuthorizationCodeException("Authorization code has expired");
+            throw new ApplicationException(ErrorCode.EXPIRED_AUTHORIZATION_CODE, "Authorization code has expired");
         }
 
         // Validate client
         if (!authCode.getClient().getClientId().equals(clientId)) {
-            throw new InvalidClientException("Authorization code does not belong to this client");
+            throw new ApplicationException(ErrorCode.INVALID_CLIENT, "Authorization code does not belong to this client");
         }
 
         // Validate redirect URI
         if (!authCode.getRedirectUri().equals(redirectUri)) {
-            throw new InvalidCodeVerifierException.InvalidRedirectUriException("Redirect URI does not match");
+            throw new ApplicationException(ErrorCode.CLIENT_NOT_REGISTERED_URI ,"Redirect URI does not match");
         }
 
         // Validate PKCE if present
         if (authCode.getCodeChallenge() != null) {
             if (codeVerifier == null) {
-                throw new InvalidCodeVerifierException("Code verifier required for PKCE");
+                throw new ApplicationException(ErrorCode.INVALID_CODE_VERIFIER, "Code verifier required for PKCE");
             }
 
             if (!CryptoUtil.verifyPkceChallenge(
                     codeVerifier,
                     authCode.getCodeChallenge(),
                     authCode.getCodeChallengeMethod())) {
-                throw new CodeChallengeMismatchException();
+                throw new ApplicationException(ErrorCode.CODE_CHALLENGE_MISMATCH);
             }
         }
 
@@ -171,7 +167,7 @@ public class AuthorizationService {
      */
     public Client getClientByClientId(String clientId) {
         return clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new InvalidClientException("Client not found: " + clientId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.CLIENT_NOT_FOUND, "Client not found: " + clientId));
     }
 
     /**

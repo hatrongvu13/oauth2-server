@@ -3,10 +3,8 @@ package com.htv.oauth2.service.token;
 import com.htv.oauth2.domain.*;
 import com.htv.oauth2.dto.response.TokenIntrospectionResponse;
 import com.htv.oauth2.dto.response.TokenResponse;
-import com.htv.oauth2.exception.auth.oauth2.InvalidClientException;
-import com.htv.oauth2.exception.auth.token.ExpiredTokenException;
-import com.htv.oauth2.exception.auth.token.InvalidTokenException;
-import com.htv.oauth2.exception.auth.token.TokenRevokedException;
+import com.htv.oauth2.exception.ApplicationException;
+import com.htv.oauth2.exception.ErrorCode;
 import com.htv.oauth2.mapper.TokenMapper;
 import com.htv.oauth2.repository.*;
 import com.htv.oauth2.util.CryptoUtil;
@@ -97,11 +95,11 @@ public class TokenService {
 
         // Find and validate refresh token
         RefreshToken refreshToken = refreshTokenRepository.findValidToken(refreshTokenValue)
-                .orElseThrow(() -> new InvalidTokenException("Invalid or expired refresh token"));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.INVALID_TOKEN, "Invalid or expired refresh token"));
 
         // Validate client
         if (!refreshToken.getClientId().equals(client.getClientId())) {
-            throw new InvalidClientException("Refresh token does not belong to this client");
+            throw new ApplicationException(ErrorCode.INVALID_CLIENT ,"Refresh token does not belong to this client");
         }
 
         // Revoke old tokens
@@ -121,13 +119,13 @@ public class TokenService {
      */
     public AccessToken validateToken(String tokenValue) {
         AccessToken token = accessTokenRepository.findValidToken(tokenValue)
-                .orElseThrow(() -> new InvalidTokenException("Invalid or expired access token"));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.INVALID_TOKEN ,"Invalid or expired access token"));
 
         if (!token.isValid()) {
             if (token.getRevoked()) {
-                throw new TokenRevokedException("Token has been revoked");
+                throw new ApplicationException(ErrorCode.TOKEN_REVOKED, "Token has been revoked");
             } else {
-                throw new ExpiredTokenException("Token has expired");
+                throw new ApplicationException(ErrorCode.EXPIRED_TOKEN ,"Token has expired");
             }
         }
 

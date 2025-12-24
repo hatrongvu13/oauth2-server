@@ -4,10 +4,8 @@ import com.htv.oauth2.domain.Client;
 import com.htv.oauth2.dto.request.client.ClientRegistrationRequest;
 import com.htv.oauth2.dto.request.client.ClientUpdateRequest;
 import com.htv.oauth2.dto.response.ClientResponse;
-import com.htv.oauth2.exception.auth.oauth2.InvalidClientException;
-import com.htv.oauth2.exception.auth.oauth2.InvalidCodeVerifierException;
-import com.htv.oauth2.exception.auth.oauth2.UnsupportedGrantTypeException;
-import com.htv.oauth2.exception.resource.ClientNotFoundException;
+import com.htv.oauth2.exception.ApplicationException;
+import com.htv.oauth2.exception.ErrorCode;
 import com.htv.oauth2.mapper.ClientMapper;
 import com.htv.oauth2.repository.ClientRepository;
 import com.htv.oauth2.util.CryptoUtil;
@@ -58,7 +56,7 @@ public class ClientService {
      */
     public ClientResponse findByClientId(String clientId) {
         Client client = clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.CLIENT_NOT_FOUND, clientId));
         return clientMapper.toResponse(client);
     }
 
@@ -70,7 +68,7 @@ public class ClientService {
         log.info("Updating client: {}", clientId);
 
         Client client = clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.CLIENT_NOT_FOUND, clientId));
 
         clientMapper.updateClientFromRequest(request, client);
         clientRepository.persist(client);
@@ -87,7 +85,7 @@ public class ClientService {
         log.info("Resetting client secret: {}", clientId);
 
         Client client = clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.CLIENT_NOT_FOUND, clientId));
 
         String newSecret = CryptoUtil.generateClientSecret();
         client.setClientSecret(newSecret); // In production, hash this
@@ -106,7 +104,7 @@ public class ClientService {
     @Transactional
     public void setClientEnabled(String clientId, boolean enabled) {
         Client client = clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.CLIENT_NOT_FOUND, clientId));
         client.setEnabled(enabled);
         clientRepository.persist(client);
         log.info("Client {} set to enabled={}", clientId, enabled);
@@ -118,7 +116,7 @@ public class ClientService {
     @Transactional
     public void deleteClient(String clientId) {
         Client client = clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.CLIENT_NOT_FOUND, clientId));
         clientRepository.delete(client);
         log.info("Client deleted: {}", clientId);
     }
@@ -136,15 +134,15 @@ public class ClientService {
      */
     public Client validateClientCredentials(String clientId, String clientSecret) {
         Client client = clientRepository.findByClientId(clientId)
-                .orElseThrow(() -> new InvalidClientException("Invalid client credentials"));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.INVALID_CLIENT, "Invalid client credentials"));
 
         if (!client.getEnabled()) {
-            throw new InvalidClientException("Client is disabled");
+            throw new ApplicationException(ErrorCode.INVALID_CLIENT, "Client is disabled");
         }
 
         // In production, use password hashing for client secrets
         if (!client.getClientSecret().equals(clientSecret)) {
-            throw new InvalidClientException("Invalid client credentials");
+            throw new ApplicationException(ErrorCode.INVALID_CLIENT, "Invalid client credentials");
         }
 
         return client;
@@ -155,7 +153,7 @@ public class ClientService {
      */
     public void validateRedirectUri(Client client, String redirectUri) {
         if (!client.isValidRedirectUri(redirectUri)) {
-            throw new InvalidCodeVerifierException.InvalidRedirectUriException(
+            throw new ApplicationException(ErrorCode.CLIENT_NOT_REGISTERED_URI,
                     "Redirect URI not registered for this client: " + redirectUri
             );
         }
@@ -166,7 +164,7 @@ public class ClientService {
      */
     public void validateGrantType(Client client, String grantType) {
         if (!client.supportsGrantType(grantType)) {
-            throw new UnsupportedGrantTypeException(grantType);
+            throw new ApplicationException(ErrorCode.UNSUPPORTED_GRANT_TYPE, grantType);
         }
     }
 }

@@ -7,12 +7,8 @@ import com.htv.oauth2.dto.request.user.RegisterRequest;
 import com.htv.oauth2.dto.request.user.UserUpdateRequest;
 import com.htv.oauth2.dto.response.RegisterResponse;
 import com.htv.oauth2.dto.response.UserResponse;
-import com.htv.oauth2.exception.auth.credentials.PasswordMismatchException;
-import com.htv.oauth2.exception.auth.mfa.InvalidMfaCodeException;
-import com.htv.oauth2.exception.security.InvalidOperationException;
-import com.htv.oauth2.exception.user.EmailAlreadyExistsException;
-import com.htv.oauth2.exception.user.UserNotFoundException;
-import com.htv.oauth2.exception.user.UsernameAlreadyExistsException;
+import com.htv.oauth2.exception.ApplicationException;
+import com.htv.oauth2.exception.ErrorCode;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.repository.UserRepository;
 import com.htv.oauth2.service.email.EmailService;
@@ -58,15 +54,15 @@ public class UserService {
 
         // Validate passwords match
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new PasswordMismatchException();
+            throw new ApplicationException(ErrorCode.PASSWORD_MISMATCH);
         }
 
         // Check duplicates
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new UsernameAlreadyExistsException(request.getUsername());
+            throw new ApplicationException(ErrorCode.USERNAME_ALREADY_EXISTS, request.getUsername());
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException(request.getEmail());
+            throw new ApplicationException(ErrorCode.EMAIL_ALREADY_EXISTS, request.getEmail());
         }
 
         // Create and persist user
@@ -104,7 +100,7 @@ public class UserService {
      */
     public UserResponse findById(String userId) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
         return userMapper.toResponse(user);
     }
 
@@ -114,17 +110,17 @@ public class UserService {
     @Transactional
     public void enableMfa(String userId, EnableMfaRequest request) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, "User not found with ID: " + userId));
 
         if (user.getMfaEnabled()) {
-            throw new InvalidOperationException("MFA is already enabled for this user.");
+            throw new ApplicationException(ErrorCode.INVALID_OPERATION, "MFA is already enabled for this user.");
         }
 
         // Verify code và tự động enable trong MfaService
         boolean verified = mfaService.verifyAndEnableMfa(userId, Integer.parseInt(request.getVerificationCode()));
 
         if (!verified) {
-            throw new InvalidMfaCodeException("Invalid MFA verification code.");
+            throw new ApplicationException(ErrorCode.INVALID_MFA_CODE, "Invalid MFA verification code.");
         }
 
         // Cập nhật flag trong User entity (để dễ query trong login flow)
@@ -145,7 +141,7 @@ public class UserService {
 
         // 1. Tìm user để đảm bảo user tồn tại
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, "User not found with ID: " + userId));
 
         // 2. Xóa cấu hình MFA (Secret key, Backup codes) thông qua MfaService
         mfaService.disableMfa(userId);
@@ -162,7 +158,7 @@ public class UserService {
      */
     public UserResponse findByUsername(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, username));
         return userMapper.toResponse(user);
     }
 
@@ -173,12 +169,12 @@ public class UserService {
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
         log.info("Updating user: {}", userId);
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
 
         // Check email conflict
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())
                 && userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException(request.getEmail());
+            throw new ApplicationException(ErrorCode.EMAIL_ALREADY_EXISTS, request.getEmail());
         }
 
         userMapper.updateUserFromRequest(request, user);
@@ -194,7 +190,7 @@ public class UserService {
     @Transactional
     public void setUserEnabled(String userId, boolean enabled) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
         user.setEnabled(enabled);
         userRepository.persist(user);
         log.info("User {} set to enabled={}", userId, enabled);
@@ -206,7 +202,7 @@ public class UserService {
     @Transactional
     public void deleteUser(String userId) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
 
         // Xóa MFA config liên quan
         mfaService.disableMfa(userId);
@@ -229,7 +225,7 @@ public class UserService {
     @Transactional
     public void addRole(String userId, String role) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
         user.getRoles().add(role.toUpperCase());
         userRepository.persist(user);
         log.info("Role {} added to user {}", role, userId);
@@ -241,7 +237,7 @@ public class UserService {
     @Transactional
     public void removeRole(String userId, String role) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
         user.getRoles().remove(role.toUpperCase());
         userRepository.persist(user);
         log.info("Role {} removed from user {}", role, userId);
@@ -269,7 +265,7 @@ public class UserService {
     @Transactional
     public void handleSuccessfulLogin(String userId) {
         User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+                .orElseThrow(() -> new ApplicationException(ErrorCode.USER_NOT_FOUND, userId));
         user.resetFailedLoginAttempts();
         user.setLastLogin(Instant.now());
         userRepository.persist(user);
