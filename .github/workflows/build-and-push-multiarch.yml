@@ -191,7 +191,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/main/docker/Dockerfile.jvm-multiarch
+          file: src/main/docker/Dockerfile.jvm
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
