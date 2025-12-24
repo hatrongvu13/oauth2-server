@@ -1,7 +1,7 @@
 package com.htv.oauth2.resource;
 
 import com.htv.oauth2.dto.response.ErrorResponse;
-import com.htv.oauth2.exception.OAuth2Exception;
+import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import com.htv.oauth2.service.client.ClientService;
 import com.htv.oauth2.service.token.TokenService;
 import jakarta.annotation.security.PermitAll;

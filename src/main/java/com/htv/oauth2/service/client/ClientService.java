@@ -1,10 +1,13 @@
 package com.htv.oauth2.service.client;
 
 import com.htv.oauth2.domain.Client;
-import com.htv.oauth2.dto.request.ClientRegistrationRequest;
-import com.htv.oauth2.dto.request.ClientUpdateRequest;
+import com.htv.oauth2.dto.request.client.ClientRegistrationRequest;
+import com.htv.oauth2.dto.request.client.ClientUpdateRequest;
 import com.htv.oauth2.dto.response.ClientResponse;
-import com.htv.oauth2.exception.*;
+import com.htv.oauth2.exception.auth.oauth2.InvalidClientException;
+import com.htv.oauth2.exception.auth.oauth2.InvalidCodeVerifierException;
+import com.htv.oauth2.exception.auth.oauth2.UnsupportedGrantTypeException;
+import com.htv.oauth2.exception.resource.ClientNotFoundException;
 import com.htv.oauth2.mapper.ClientMapper;
 import com.htv.oauth2.repository.ClientRepository;
 import com.htv.oauth2.util.CryptoUtil;
@@ -152,7 +155,7 @@ public class ClientService {
      */
     public void validateRedirectUri(Client client, String redirectUri) {
         if (!client.isValidRedirectUri(redirectUri)) {
-            throw new InvalidRedirectUriException(
+            throw new InvalidCodeVerifierException.InvalidRedirectUriException(
                     "Redirect URI not registered for this client: " + redirectUri
             );
         }

@@ -1,9 +1,9 @@
 package com.htv.oauth2.resource;
 
 import com.htv.oauth2.domain.*;
-import com.htv.oauth2.dto.request.*;
+import com.htv.oauth2.dto.auth.AuthorizationRequest;
 import com.htv.oauth2.dto.response.*;
-import com.htv.oauth2.exception.*;
+import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import com.htv.oauth2.service.auth.*;
 import com.htv.oauth2.security.UserContextProvider;
 import com.htv.oauth2.util.HttpUtil;

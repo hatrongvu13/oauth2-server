@@ -1,7 +1,8 @@
 package com.htv.oauth2.mapper;
 
 import com.htv.oauth2.domain.*;
-import com.htv.oauth2.dto.request.*;
+import com.htv.oauth2.dto.request.user.RegisterRequest;
+import com.htv.oauth2.dto.request.user.UserUpdateRequest;
 import com.htv.oauth2.dto.response.*;
 import jakarta.enterprise.context.ApplicationScoped;
 

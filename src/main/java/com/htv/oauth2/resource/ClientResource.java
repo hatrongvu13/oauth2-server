@@ -1,9 +1,9 @@
 package com.htv.oauth2.resource;
 
-import com.htv.oauth2.dto.request.ClientRegistrationRequest;
+import com.htv.oauth2.dto.request.client.ClientRegistrationRequest;
 import com.htv.oauth2.dto.response.ClientResponse;
 import com.htv.oauth2.dto.response.ErrorResponse;
-import com.htv.oauth2.exception.OAuth2Exception;
+import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import com.htv.oauth2.service.client.ClientService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;

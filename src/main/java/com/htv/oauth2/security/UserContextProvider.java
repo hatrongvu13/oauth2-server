@@ -1,6 +1,7 @@
 package com.htv.oauth2.security;
 
 import com.htv.oauth2.domain.User;
+import com.htv.oauth2.exception.security.UnauthorizedException;
 import com.htv.oauth2.repository.UserRepository;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.RequestScoped;
@@ -36,7 +37,7 @@ public class UserContextProvider {
      */
     public User getCurrentUserOrThrow() {
         return getCurrentUser()
-                .orElseThrow(() -> new com.htv.oauth2.exception.UnauthorizedException(
+                .orElseThrow(() -> new UnauthorizedException(
                         "Authentication required"
                 ));
     }

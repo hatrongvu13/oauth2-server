@@ -1,8 +1,15 @@
 package com.htv.oauth2.service.auth;
 
 import com.htv.oauth2.domain.User;
-import com.htv.oauth2.dto.request.LoginRequest;
-import com.htv.oauth2.exception.*;
+import com.htv.oauth2.dto.auth.LoginRequest;
+import com.htv.oauth2.exception.auth.credentials.InvalidCredentialsException;
+import com.htv.oauth2.exception.auth.mfa.InvalidMfaCodeException;
+import com.htv.oauth2.exception.auth.mfa.MfaRequiredException;
+import com.htv.oauth2.exception.security.RateLimitExceededException;
+import com.htv.oauth2.exception.user.AccountDisabledException;
+import com.htv.oauth2.exception.user.AccountLockedException;
+import com.htv.oauth2.exception.user.EmailNotVerifiedException;
+import com.htv.oauth2.exception.user.UserNotFoundException;
 import com.htv.oauth2.repository.UserRepository;
 import com.htv.oauth2.service.AuditService;
 import com.htv.oauth2.service.RateLimitService;
@@ -44,7 +51,7 @@ public class AuthenticationService {
     public User authenticateUser(LoginRequest request, String ipAddress, String userAgent) {
         log.info("Authenticating user: {} from IP: {}", request.getUsername(), ipAddress);
 
-        // 1. Check rate limiting (Sử dụng logic mới trả về boolean)
+        // 1. Check rate limiting
         if (rateLimitService.checkLogin(ipAddress).isBlocked()) {
             log.warn("Rate limit exceeded for IP: {}", ipAddress);
             auditService.logAnonymous("LOGIN_RATE_LIMIT", ipAddress,

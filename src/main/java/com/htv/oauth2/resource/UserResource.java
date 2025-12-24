@@ -1,11 +1,11 @@
 package com.htv.oauth2.resource;
 
-import com.htv.oauth2.dto.request.RegisterRequest;
-import com.htv.oauth2.dto.request.UserUpdateRequest;
+import com.htv.oauth2.dto.request.user.RegisterRequest;
+import com.htv.oauth2.dto.request.user.UserUpdateRequest;
 import com.htv.oauth2.dto.response.ErrorResponse;
 import com.htv.oauth2.dto.response.RegisterResponse;
 import com.htv.oauth2.dto.response.UserResponse;
-import com.htv.oauth2.exception.OAuth2Exception;
+import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;

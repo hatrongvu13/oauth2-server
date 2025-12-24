@@ -1,9 +1,14 @@
 package com.htv.oauth2.service.auth;
 
 import com.htv.oauth2.domain.*;
-import com.htv.oauth2.dto.request.AuthorizationRequest;
+import com.htv.oauth2.dto.auth.AuthorizationRequest;
 import com.htv.oauth2.dto.response.AuthorizationResponse;
-import com.htv.oauth2.exception.*;
+import com.htv.oauth2.exception.auth.oauth2.CodeChallengeMismatchException;
+import com.htv.oauth2.exception.auth.oauth2.InvalidClientException;
+import com.htv.oauth2.exception.auth.oauth2.InvalidCodeVerifierException;
+import com.htv.oauth2.exception.auth.oauth2.UnsupportedResponseTypeException;
+import com.htv.oauth2.exception.auth.token.ExpiredAuthorizationCodeException;
+import com.htv.oauth2.exception.auth.token.InvalidAuthorizationCodeException;
 import com.htv.oauth2.repository.*;
 import com.htv.oauth2.service.client.ClientService;
 import com.htv.oauth2.util.CryptoUtil;
@@ -69,7 +74,7 @@ public class AuthorizationService {
 
         // Validate scopes
         if (!ValidationUtil.areScopesAllowed(approvedScopes, client.getScopes())) {
-            throw new InvalidScopeException("Requested scopes not allowed for this client");
+            throw new InvalidCodeVerifierException.InvalidScopeException("Requested scopes not allowed for this client");
         }
 
         // Generate authorization code
@@ -136,7 +141,7 @@ public class AuthorizationService {
 
         // Validate redirect URI
         if (!authCode.getRedirectUri().equals(redirectUri)) {
-            throw new InvalidRedirectUriException("Redirect URI does not match");
+            throw new InvalidCodeVerifierException.InvalidRedirectUriException("Redirect URI does not match");
         }
 
         // Validate PKCE if present

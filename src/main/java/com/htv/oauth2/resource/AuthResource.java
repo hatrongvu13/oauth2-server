@@ -2,11 +2,13 @@ package com.htv.oauth2.resource;
 
 import com.htv.oauth2.domain.Client;
 import com.htv.oauth2.domain.User;
-import com.htv.oauth2.dto.request.EnableMfaRequest;
-import com.htv.oauth2.dto.request.LoginRequest;
-import com.htv.oauth2.dto.request.MfaVerifyRequest;
+import com.htv.oauth2.dto.request.mfa.EnableMfaRequest;
+import com.htv.oauth2.dto.auth.LoginRequest;
+import com.htv.oauth2.dto.request.mfa.MfaVerifyRequest;
 import com.htv.oauth2.dto.response.*;
-import com.htv.oauth2.exception.*;
+import com.htv.oauth2.exception.auth.oauth2.OAuth2Exception;
+import com.htv.oauth2.exception.auth.mfa.MfaRequiredException;
+import com.htv.oauth2.exception.resource.ResourceNotFoundException;
 import com.htv.oauth2.mapper.UserMapper;
 import com.htv.oauth2.service.auth.AuthenticationService;
 import com.htv.oauth2.service.mfa.MfaService;
