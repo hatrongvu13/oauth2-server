@@ -47,7 +47,7 @@ public enum ErrorCode {
 
     // ===== Client Errors (4500-4599) =====
     CLIENT_NOT_FOUND("ERR_4500", "error.client_not_found", 404),
-    CLIENT_NOT_REGISTERED_URI("ERR_4501", "error.error.redirect_url", 404),
+    CLIENT_NOT_REGISTERED_URI("ERR_4501", "error.redirect_url", 404),
 
     // ===== Security Errors (4600-4699) =====
     UNAUTHORIZED("ERR_4600", "error.unauthorized", 401),

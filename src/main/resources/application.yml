@@ -82,7 +82,7 @@ quarkus:
     password: ${QUARKUS_DATASOURCE_PASSWORD:root}
 
     jdbc:
-      url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/oauth2db}
+      url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://171.229.223.206:5432/oauth2db}
       # Connection pool settings
       max-size: 16
       min-size: 4
@@ -128,7 +128,7 @@ quarkus:
   # Redis Configuration
   # ============================================
   redis:
-    hosts: ${QUARKUS_REDIS_HOSTS:redis://localhost:6379}
+    hosts: ${QUARKUS_REDIS_HOSTS:redis://171.229.223.206:6379}
     password: ${QUARKUS_REDIS_PASSWORD:}
     database: 0
     timeout: 10s
