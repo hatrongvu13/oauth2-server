@@ -21,7 +21,7 @@ public class MessageService {
      * Lấy message theo key và locale
      */
     public String getMessage(String key, Locale locale) {
-        return getMessage(key, locale, null);
+        return getMessage(key, locale, new Object[0]);
     }
 
     /**
